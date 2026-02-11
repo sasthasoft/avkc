@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rent Payment System</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial, sans-serif;background:#f4f6f8;}
+.container{max-width:1200px;margin:auto;padding:10px;}
+h2,h3{text-align:center;color:#c2185b;}
+.card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:15px;}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+label{font-size:12px;font-weight:bold;}
+input,select,textarea{width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;}
+textarea{height:70px;resize:none}
+button{width:100%;padding:10px;border:none;border-radius:8px;background:#c2185b;color:#fff;font-weight:bold;cursor:pointer;}
+#tenantResult{margin-top:10px;background:#fce4ec;padding:10px;border-radius:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+#tenantResult img{max-width:80px;border-radius:6px;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:900px;font-size:12px;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
+th{background:#f06292;color:#fff;}
+table img{max-width:60px;border-radius:5px;}
+.bill{display:none;padding:20px;color:#000;}
+.print-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #000;padding:10px 0;}
+.logo{width:70px;height:auto;}
+.print-title{flex:1;text-align:center;padding:0 10px;}
+.print-title .line1{font-size:20px;font-weight:bold;}
+.print-title .line2{font-size:14px;line-height:1.4;}
+.bill-body{display:flex;margin-top:20px;flex-wrap:wrap;}
+.left-box,.right-box{width:50%;padding:10px;box-sizing:border-box;}
+.left-box{border-right:1px dashed #000;}
+.customer-img{width:120px;height:140px;border:1px solid #000;margin-top:10px;}
+.bill-footer{text-align:right;margin-top:20px;font-weight:bold;}
+@media (max-width: 768px){
+  .left-box,.right-box{width:100%;border:none;}
+  h2{font-size:20px;}
+  table{min-width:750px;}
+}
+@media print{
+  body *{visibility:hidden}
+  .bill,.bill *{visibility:visible}
+  .bill{position:absolute;top:0;left:0;width:100%;font-size:12.5px;color:#000;}
+  @page{size:A4;margin:15mm;}
+  table{width:90%;table-layout:fixed;border-collapse:collapse;}
+  th,td{border:1px solid #000;padding:6px 4px;text-align:center;vertical-align:middle;word-wrap:break-word;}
+  th{font-weight:bold;background:#f3f3f3;font-size:12.5px;}
+  td{font-size:12.5px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h2>🏪 Shop Rent Payment System</h2>
+
+<!-- SEARCH -->
+<div class="card">
+  <div class="row">
+    <div>
+      <label>Search Mobile / Shop No</label>
+      <input id="searchKey" placeholder="Mobile or Shop No">
+    </div>
+    <div style="align-self:end">
+      <button onclick="searchTenant()">🔍 Search</button>
+    </div>
+  </div>
+  <div id="tenantResult"></div>
+</div>
+
+<!-- PAYMENT -->
+<div class="card">
+<h3>Payment Entry</h3>
+<div class="row">
+  <div><label>Date</label><input type="date" id="paymentDate"></div>
+  <div><label>Transaction ID</label><input id="transactionId"></div>
+  <div>
+    <label>Months (Multi Select)</label>
+    <select id="months" multiple onchange="calculate()">
+      <option>January</option><option>February</option>
+      <option>March</option><option>April</option>
+      <option>May</option><option>June</option>
+      <option>July</option><option>August</option>
+      <option>September</option><option>October</option>
+      <option>November</option><option>December</option>
+    </select>
+  </div>
+</div>
+
+<div class="row">
+  <div><label>Rental (Per Month)</label><input id="rental" oninput="calculate()"></div>
+  <div><label>Gross Amount</label><input id="grossAmt" readonly></div>
+  <div><label>Discount</label><input id="discount" value="0" oninput="calculate()"></div>
+</div>
+
+<div class="row">
+  <div><label>Tax %</label><input id="taxPercentage" value="0" oninput="calculate()"></div>
+  <div><label>Tax Amount</label><input id="taxAmt" readonly></div>
+  <div><label>Net Amount</label><input id="netAmt" readonly></div>
+</div>
+
+<div class="row">
+  <div><label>Now Paid</label><input id="nowPaid" oninput="calculate()"></div>
+  <div><label>Pending</label><input id="pending" readonly></div>
+  <div><label>Rental Set</label><input id="rentalSet"></div>
+</div>
+
+<div class="row">
+  <div><label>Remarks</label><textarea id="remarks"></textarea></div>
+  <div><label>Upload Image</label><input type="file" id="image" accept="image/*"></div>
+</div>
+
+<br>
+<button onclick="savePayment()">💾 Save & Print</button>
+</div>
+
+<!-- BILL -->
+<div class="bill" id="bill"></div>
+
+<!-- TABLE -->
+<div class="card">
+<h3>All Payments</h3>
+<button onclick="loadPayments()">🔄 Refresh</button>
+<br><br>
+<div class="table-wrap">
+<table id="dataTable">
+  <thead></thead>
+  <tbody></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbyogWMiTNNixoMp7E0NEA7-z_y0Syxxrp_NrG8hWhI7bpPRNokcNAKYo1EyZxxx6qnldA/exec";
+let currentTenant={}, imageBase64="";
+
+/* IMAGE */
+const image = document.getElementById("image");
+image.addEventListener("change", e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=> imageBase64 = reader.result;
+  reader.readAsDataURL(f);
+});
+
+/* SEARCH */
+function searchTenant(){
+  fetch(API_URL,{
+    method:"POST",
+    body: JSON.stringify({action:"searchTenant", keyword: searchKey.value})
+  }).then(r=>r.json()).then(res=>{
+    if(!res.tenants.length){
+      tenantResult.innerHTML="❌ No tenant found";
+      currentTenant={};
+      return;
+    }
+    currentTenant = res.tenants[0];
+    rental.value = currentTenant.rental;
+    calculate();
+    tenantResult.innerHTML=`
+      <b>${currentTenant.tenantName}</b> | Shop ${currentTenant.shopNo} | ${currentTenant.mobile}
+      ${currentTenant.imageBase64?`<img src="${currentTenant.imageBase64}">`:""}
+    `;
+  });
+}
+
+/* GET SELECTED MONTHS */
+function getSelectedMonths(){
+  return [...months.selectedOptions].map(o=>o.value);
+}
+
+/* CALCULATION */
+function calculate(){
+  const monthCount = getSelectedMonths().length;
+  const rent = +rental.value || 0;
+  const gross = monthCount * rent;
+  grossAmt.value = gross;
+
+  const disc = +discount.value || 0;
+  const tax = ((gross - disc) * (+taxPercentage.value || 0))/100;
+  taxAmt.value = tax.toFixed(2);
+
+  const net = gross - disc + tax;
+  netAmt.value = net.toFixed(2);
+  pending.value = (net - (+nowPaid.value || 0)).toFixed(2);
+}
+
+/* SAVE & PRINT */
+function savePayment(){
+  if(!currentTenant.tenantName){ alert("Please select a tenant!"); return; }
+
+  const data = {
+    action:"savePayment",
+    tenantName: currentTenant.tenantName,
+    mobile: currentTenant.mobile,
+    shopNo: currentTenant.shopNo,
+    paymentDate: paymentDate.value,
+    transactionId: transactionId.value,
+    months: getSelectedMonths().join(", "),
+    monthsCount: getSelectedMonths().length,
+    rental: rental.value,
+    grossAmt: grossAmt.value,
+    discount: discount.value,
+    taxPercentage: taxPercentage.value,
+    taxAmt: taxAmt.value,
+    netAmt: netAmt.value,
+    nowPaid: nowPaid.value,
+    pending: pending.value,
+    rentalSet: rentalSet.value,
+    remarks: remarks.value,
+    imageBase64: imageBase64
+  };
+
+  fetch(API_URL, {method:"POST", body:JSON.stringify(data)})
+    .then(r=>r.json())
+    .then(res=>{
+      alert("Saved Bill No: "+res.billNo);
+
+      // Print bill
+      showBill({...data, billNo: res.billNo, paidAmount: data.nowPaid, pendingAmount: data.pending});
+      loadPayments();
+    });
+}
+
+/* SHOW BILL */
+function showBill(d){
+  bill.innerHTML=`
+  <div class="print-header">
+    <img src="1.jpg" class="logo">
+    <div class="print-title">
+      <div class="line1"><h2>AVKC சங்கம் - கோவில்பட்டி</h2></div>
+      <div class="line2"><h3>ஆயிரவைசிய காசுக்கார செட்டிப்பிள்னைகள் சங்கத்திற்கு பாத்தியப்பட்ட கடைகள் வாடகை ரசீது</h3></div>
+    </div>
+    <img src="2.png" class="logo">
+  </div>
+
+  <table width="100%" style="margin-top:15px;border-collapse:collapse">
+    <tr>
+      <td width="30%" rowspan="2" align="center">
+        ${d.imageBase64?`<img src="${d.imageBase64}" class="customer-img">`:`<img src="customer.jpg" class="customer-img">`}
+      </td>
+      <td width="70%">
+        <h2><b>பெயர் :</b> ${d.tenantName} &nbsp;&nbsp; <b>மொபைல் :</b> ${d.mobile}</h2>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <h3><b>கடை எண் :</b> ${d.shopNo} &nbsp;&nbsp; <b>மாத வாடகை :</b> ₹${d.rental}</h3>
+      </td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top:20px">Payment Details</h3>
+  <table width="100%" border="1" cellspacing="0" cellpadding="6">
+    <tr>
+      <th>Bill No</th><th>Date</th><th>Month of Pay</th><th>Rental</th><th>Tax</th><th>Discount</th><th>Now Paying</th><th>Pending</th>
+    </tr>
+    <tr align="center">
+      <td>${d.billNo || "AUTO"}</td>
+      <td>${d.paymentDate}</td>
+      <td>${d.months}</td>
+      <td>₹${d.rental}</td>
+      <td>${d.taxPercentage}%</td>
+      <td>₹${d.discount}</td>
+      <td>₹${d.paidAmount}</td>
+      <td>₹${d.pendingAmount}</td>
+    </tr>
+  </table>
+
+  <p style="margin-top:10px"><b>Remarks :</b> ${d.remarks || "-"}</p>
+
+  <div class="bill-footer">
+    <h3>வசூலித்தவர் கையொப்பம் _____________<br><br>
+    வாடகைதாரர் கையொப்பம் _____________</h3>
+  </div>
+  `;
+  bill.style.display="block";
+  window.print();
+}
+
+/* LOAD PAYMENTS */
+function loadPayments(){
+  fetch(API_URL, {method:"POST", body:JSON.stringify({action:"getPayments"})})
+    .then(r=>r.json())
+    .then(res=>{
+      const h=dataTable.querySelector("thead");
+      const b=dataTable.querySelector("tbody");
+      h.innerHTML=b.innerHTML="";
+      if(!res.data.length) return;
+
+      const keys=Object.keys(res.data[0]).filter(k=>k!=="row");
+      h.innerHTML="<tr>"+keys.map(k=>`<th>${k}</th>`).join("")+"</tr>";
+
+      res.data.forEach(r=>{
+        b.innerHTML+="<tr>"+keys.map(k=>
+          k==="Image_Base64" && r[k]?`<td><img src="${r[k]}"></td>`:`<td>${r[k]}</td>`
+        ).join("")+"</tr>";
+      });
+    });
+}
+loadPayments();
+</script>
+</body>
+</html>

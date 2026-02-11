@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rent Payment System</title>
+
+<style>
+body{
+  font-family:"Latha","Noto Sans Tamil",Arial;
+  background:#f4f4f4;
+  padding:10px;
+}
+
+.container{
+  max-width:720px;
+  margin:auto;
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 0 10px #999;
+}
+
+input,textarea,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  font-size:16px;
+}
+
+button{
+  background:#0b7dda;
+  color:#fff;
+  border:none;
+  border-radius:5px;
+}
+
+label{margin-top:10px;display:block}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:15px;
+}
+
+table,th,td{
+  border:1px solid #000;
+}
+
+th,td{
+  padding:6px;
+  text-align:center;
+}
+
+/* ================= BILL PRINT ================= */
+
+.bill{
+  display:none;
+  padding:20px;
+  color:#000;
+}
+
+/* TAMIL NOTICE */
+.tamil-header{
+  border:2px solid #000;
+  padding:10px;
+  font-size:14px;
+  line-height:1.8;
+  text-align:left;
+}
+
+.tamil-header h3{
+  text-align:center;
+  margin:0 0 10px 0;
+  font-size:18px;
+  text-decoration:underline;
+}
+
+/* BILL BODY */
+.bill-details{
+  margin-top:15px;
+  font-size:15px;
+}
+
+.bill-details div{
+  margin-bottom:6px;
+}
+
+/* FOOTER */
+.bill-footer{
+  margin-top:30px;
+  text-align:right;
+  font-weight:bold;
+}
+
+/* PRINT RULE */
+@media print{
+  body *{visibility:hidden}
+  .bill,.bill *{visibility:visible}
+  .bill{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+  }
+  @page{
+    size:A4;
+    margin:15mm;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2 align="center">Shop Rent Payment</h2>
+
+<input type="number" id="mobile" placeholder="Tenant Mobile">
+<button onclick="searchTenant()">Search Tenant</button>
+
+<div id="tenantInfo"></div>
+
+<label>Payment Date</label>
+<input type="date" id="payDate">
+
+<div id="months" style="display:none">
+<h4>Months Paid</h4>
+<label><input type="checkbox" value="Jan" onchange="calc()"> Jan</label>
+<label><input type="checkbox" value="Feb" onchange="calc()"> Feb</label>
+<label><input type="checkbox" value="Mar" onchange="calc()"> Mar</label>
+<label><input type="checkbox" value="Apr" onchange="calc()"> Apr</label>
+<label><input type="checkbox" value="May" onchange="calc()"> May</label>
+</div>
+
+<label>Discount ₹</label>
+<input type="number" id="discount" value="0" oninput="calc()">
+
+<label>Now Paying ₹</label>
+<input type="number" id="paid" value="0" oninput="calc()">
+
+<label>Remarks</label>
+<textarea id="remarks"></textarea>
+
+<h3>Total ₹ : <span id="total">0</span></h3>
+<h3>Pending ₹ : <span id="pending">0</span></h3>
+
+<button onclick="saveAndPrint()">Save & Print</button>
+
+<div class="bill" id="bill"></div>
+
+<h3>All Payments</h3>
+<table>
+<thead>
+<tr>
+<th>Date</th><th>Name</th><th>Mobile</th><th>Shop</th>
+<th>Months</th><th>Total</th><th>Paid</th><th>Pending</th>
+</tr>
+</thead>
+<tbody id="paymentsTableBody"></tbody>
+</table>
+
+</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbzRmLFZkjHlowHGHS9RE3jsHAduVDksjSLttn1BNaWa57bulK-_6WGhmBebOO9YhIX54A/exec";
+let tenant={};
+
+window.onload=()=>{
+  payDate.value=new Date().toISOString().split("T")[0];
+};
+
+function searchTenant(){
+  fetch(API,{method:"POST",body:JSON.stringify({action:"searchTenant",mobile:mobile.value})})
+  .then(r=>r.json()).then(d=>{
+    tenant=d.tenant;
+    tenantInfo.innerHTML=`
+    <hr>
+    <b>பெயர் :</b> ${tenant.tenantName}<br>
+    <b>கடை எண் :</b> ${tenant.shopNo}<br>
+    <b>மொபைல் :</b> ${tenant.mobile}<br>
+    <b>மாத வாடகை :</b> ₹${tenant.rent}`;
+    months.style.display="block";
+    calc();
+  });
+}
+
+function calc(){
+  if(!tenant.rent) return;
+  const count=document.querySelectorAll("#months input:checked").length;
+  const base=count*tenant.rent;
+  const disc=+discount.value||0;
+  const totalAmt=base-disc;
+  total.innerText=totalAmt;
+  pending.innerText=totalAmt-(+paid.value||0);
+}
+
+function saveAndPrint(){
+  const monthsPaid=[...document.querySelectorAll("#months input:checked")].map(x=>x.value).join(", ");
+
+  bill.innerHTML=`
+  <!-- ===== TAMIL NOTICE ===== -->
+  <div class="tamil-header">
+    <h3>வாடகை நிபந்தனைகள்</h3>
+    
+1.மாத வாடகை பேசி ஒப்புக்கொண்டு மூன்று மாத வாடகை அட்வான்ஸாக செலுத்த வேண்டும். மாத வாடகையை மறுமாதம் 5ம் தேதிக்குள் செலுத்த வேண்டும். தவறினால் வட்டியுடன் சேர்த்து வசூலிக்கப்படும்.<br>
+2. எக்காரணத்தை முன்னிட்டும் உள்வாடகைக்கோ வேறு நபருக்கோ மாற்றிக் கொள்ளவோ வாடகைதாரருக்கு உரிமை கிடையாது. கட்டிடம்
+தேவையில்லையென்றால் வாடகை பாக்கிகள் சகிதம் எங்கள் வசம் ஒப்புவிக்க வேண்டும். வாடகைதாரர்கள் ரிப்பேர் செய்துகொள்ள உரிமை கிடையாது.<br>
+3. எலக்ட்ரிக் சார்ஜ்களை மாத-மாதம் வாடகைதாரர்கள் செலுத்திக் கொள்ளவேண்டும்.<br>
+4. கட்டிடம் காலிசெய்யும் போது வாடகைப் பாக்கிகள் பூராவும் செலுத்திவிட்டு அட்வான்ஸ் தொகையை வாபஸ் பெற்றுக்கொள்ள வேண்டும். ஆக்கிரமிப்புக்கு இடம் கொடுக்கக் கூடாது ஆக்கிரமிப்பு செய்யவும் கூடாது.<br>
+5. இதன்படி நடந்து வருவேனாகவும்.<br>
+6. அரசால் விதிக்கப்படும் சொத்து வரி, நகராட்சி வரி, சேவை வரி (GST உட்பட) அல்லது
+இதர எந்த வகையான வரிகளும் நடைமுறையில் இருந்தால்,
+அதற்கான தொகையை வாடகைதாரரே செலுத்த வேண்டும்.<br>
+7. வரி விகிதத்தில் அரசு மாற்றம் செய்தால் அல்லது புதிய வரி விதிக்கப்பட்டால்,
+அதனால் ஏற்படும் கூடுதல் தொகை உடனடியாக வாடகையில் சேர்க்கப்பட்டு
+வாடகைதாரரிடமிருந்து வசூலிக்கப்படும்.<br>
+8. வரி செலுத்தத் தவறினால் அல்லது தாமதமானால்,
+அதனால் ஏற்படும் அபராதம், வட்டி அல்லது சட்ட நடவடிக்கைகளுக்கான
+முழுப் பொறுப்பும் வாடகைதாரரையே சாரும்.<br>
+  </div>
+
+  <!-- ===== BILL DETAILS ===== -->
+  <div class="bill-details">
+    <div><b>பெயர் :</b> ${tenant.tenantName}</div>
+    <div><b>கடை எண் :</b> ${tenant.shopNo}</div>
+    <div><b>மொபைல் :</b> ${tenant.mobile}</div>
+    <div><b>செலுத்திய மாதங்கள் :</b> ${monthsPaid}</div>
+    <div><b>மொத்த தொகை :</b> ₹ ${total.innerText}</div>
+    <div><b>செலுத்தியது :</b> ₹ ${paid.value}</div>
+    <div><b>மீதம் :</b> ₹ ${pending.innerText}</div>
+    <div><b>குறிப்பு :</b> ${remarks.value}</div>
+  </div>
+
+  <div class="bill-footer">கையொப்பம்</div>
+  `;
+  bill.style.display="block";
+  window.print();
+}
+</script>
+
+</body>
+</html>
