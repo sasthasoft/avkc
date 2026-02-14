@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rental Management</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --pink:#c2185b;
+  --pink-dark:#a3154c;
+  --bg:#f5f5f5;
+  --white:#ffffff;
+  --shadow:0 4px 12px rgba(0,0,0,0.12);
+}
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:Segoe UI, Arial, sans-serif;
+  background:var(--bg);
+}
+header{
+  background:var(--pink);
+  color:white;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 15px;
+}
+header h2{ margin:0; font-size:18px; }
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.header-actions i{
+  font-size:20px;
+  cursor:pointer;
+}
+.header-actions select{
+  border:none;
+  border-radius:6px;
+  padding:4px 6px;
+}
+#dashboard{
+  padding:15px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:15px;
+}
+.card{
+  background:white;
+  border-radius:14px;
+  padding:18px 10px;
+  text-align:center;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  transition:0.3s;
+}
+.card i{
+  font-size:32px;
+  color:var(--pink);
+  margin-bottom:8px;
+}
+.card span{
+  display:block;
+  font-weight:600;
+  font-size:14px;
+}
+.card:hover{
+  background:var(--pink);
+  transform:translateY(-4px);
+}
+.card:hover i,
+.card:hover span{
+  color:white;
+}
+footer{
+  background:var(--pink-dark);
+  color:white;
+  padding:15px 10px;
+  margin-top:20px;
+}
+.footer-box{
+  max-width:1100px;
+  margin:auto;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+@media(max-width:600px){
+  header h2{font-size:16px;}
+  .card i{font-size:28px;}
+  .footer-box{flex-direction:column;text-align:center;}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="header-actions">
+    <h2 id="title">AVKC சங்கம் - கோவில்பட்டி </h2>
+
+  </div>
+</header>
+
+<div id="dashboard">
+
+  <div class="card" onclick="openPage('newentry.html')">
+    <i class="fa fa-user"></i><span id="t1">New Tenant</span>
+  </div>
+
+  <div class="card" onclick="openPage('expanses.html')">
+    <i class="fa fa-wallet"></i><span id="t6">Expenses</span>
+  </div>
+  
+  <div class="card" onclick="openPage('land.html')">
+    <i class="fa fa-store"></i><span id="t2">Property</span>
+  </div>
+
+  <div class="card" onclick="openPage('agreement.html')">
+    <i class="fa fa-file-contract"></i><span id="t3">Agreement</span>
+  </div>
+
+  <div class="card" onclick="openPage('rental.html')">
+    <i class="fa fa-file-invoice"></i><span id="t4">Billing</span>
+  </div>
+
+  <div class="card" onclick="openPage('payment.html')">
+    <i class="fa fa-money-bill-wave"></i><span id="t5">Payments</span>
+  </div>
+
+  
+
+  <div class="card" onclick="openPage('maintenance.html')">
+    <i class="fa fa-tools"></i><span id="t7">Maintenance</span>
+  </div>
+
+  <div class="card" onclick="openPage('rptmaster.html')">
+    <i class="fa fa-chart-line"></i><span id="t8">Reports</span>
+  </div>
+
+  <div class="card" onclick="openPage('users.html')">
+    <i class="fa fa-users-cog"></i><span id="t9">Users</span>
+  </div>
+  <div class="card" onclick="openPage('lg.html')">
+    <i class="fa fa-sign-out-alt"></i><span>Logout</span>
+</div>
+
+</div>
+
+<footer>
+  <div class="footer-box">
+    <div>Powered By, Sastha Software</div>
+    <div>Call : (+91) 6383003056</div>
+  </div>
+</footer>
+
+<script>
+function openPage(page){
+  window.location.href = page;
+}
+
+function changeLang(lang){
+  if(lang==="ta"){
+    title.innerText="AVKC சங்கம் கோவில்பட்டி";
+    t1.innerText="புதிய வாடகையாளர்";
+    t2.innerText="கடைகள்";
+    t3.innerText="ஒப்பந்தம்";
+    t4.innerText="பில்";
+    t5.innerText="பணம்";
+    t6.innerText="செலவுகள்";
+    t7.innerText="பராமரிப்பு";
+    t8.innerText="அறிக்கைகள்";
+    t9.innerText="பயனர்கள்";
+  }else{
+    title.innerText="AVKC Sangam, Kovilpatti";
+    t1.innerText="New Tenant";
+    t2.innerText="Shops";
+    t3.innerText="Lease";
+    t4.innerText="Billing";
+    t5.innerText="Payments";
+    t6.innerText="Expenses";
+    t7.innerText="Maintenance";
+    t8.innerText="Reports";
+    t9.innerText="Users";
+  }
+}
+</script>
+
+</body>
+</html>

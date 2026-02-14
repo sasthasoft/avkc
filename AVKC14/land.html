@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Land Property Details</title>
+
+<style>
+body{font-family:Arial;margin:0;background:#fff}
+.header{background:#c2185b;color:#fff;text-align:center;padding:15px}
+.container{max-width:1200px;margin:auto;padding:15px}
+
+input,select,button{
+ width:100%;
+ padding:10px;
+ margin:6px 0;
+ box-sizing:border-box;
+ font-size:14px;
+}
+
+button{
+ background:#c2185b;
+ color:#fff;
+ border:0;
+ font-weight:bold;
+ border-radius:4px;
+}
+
+.table-wrap{
+ width:100%;
+ overflow-x:auto;
+ margin-top:15px;
+ border:1px solid #ccc;
+}
+
+table{
+ width:100%;
+ min-width:1200px;
+ border-collapse:collapse;
+}
+
+th,td{
+ border:1px solid #ccc;
+ padding:8px;
+ text-align:center;
+ white-space:nowrap;
+ font-size:13px;
+}
+
+thead th{
+ position:sticky;
+ top:0;
+ background:#f4b6c2;
+}
+
+.action{
+ cursor:pointer;
+ color:#8e0038;
+ font-weight:bold;
+}
+
+.toast{
+ position:fixed;
+ bottom:20px;
+ left:50%;
+ transform:translateX(-50%);
+ background:#333;
+ color:#fff;
+ padding:10px 15px;
+ border-radius:5px;
+ display:none;
+ z-index:1000;
+}
+
+@media(max-width:600px){
+ th,td{font-size:12px;padding:6px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>Land / Property Details</h2>
+</div>
+
+<div class="container">
+<input type="hidden" id="pid">
+
+<input type="date" id="date">
+<input id="owner" placeholder="Owner Name">
+
+<select id="ptype">
+<option>Land</option>
+<option>House</option>
+<option>Plot</option>
+<option>Commercial</option>
+</select>
+
+<input id="survey" placeholder="Survey No">
+<input id="area" placeholder="Area (Sq.ft / Acre)">
+
+<!-- Location hidden but preserved -->
+<input type="hidden" id="location">
+
+<input id="value" type="number" placeholder="Property Value">
+
+<select id="mode">
+<option>Cash</option>
+<option>Bank</option>
+<option>UPI</option>
+</select>
+
+<input id="ref" placeholder="Reference No">
+<input id="remarks" placeholder="Remarks">
+
+<button onclick="save()">Save / Update</button>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Date</th>
+<th>Owner</th>
+<th>Type</th>
+<th>Survey</th>
+<th>Area</th>
+<th>Value</th>
+<th>Mode</th>
+<th>Ref</th>
+<th>Remarks</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="data"></tbody>
+</table>
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const GS_URL="https://script.google.com/macros/s/AKfycbyUruxTh0RLk0W84ORqOdB_3CPn1h7-EQUmDm9Ds1cTZmmkipgWv8y5kChFsbDY45CG/exec";
+
+/* ===== DATE FORMAT FUNCTIONS ===== */
+function toDDMMMYYYY(dateStr){
+ if(!dateStr) return "";
+ const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+ const d=new Date(dateStr);
+ if(isNaN(d)) return dateStr; // safety
+ return String(d.getDate()).padStart(2,'0')+"-"+m[d.getMonth()]+"-"+d.getFullYear();
+}
+
+function toInputDate(v){
+ if(!v) return "";
+ const m={"Jan":"01","Feb":"02","Mar":"03","Apr":"04","May":"05","Jun":"06","Jul":"07","Aug":"08","Sep":"09","Oct":"10","Nov":"11","Dec":"12"};
+ const p=v.split("-");
+ return p[2]+"-"+m[p[1]]+"-"+p[0];
+}
+
+function save(){
+ fetch(GS_URL,{
+  method:"POST",
+  body:JSON.stringify({
+    action: pid.value ? "edit" : "save",
+    propertyId: pid.value,
+    date: toDDMMMYYYY(date.value),
+    owner: owner.value,
+    ptype: ptype.value,
+    survey: survey.value,
+    area: area.value,
+    location: location.value,
+    value: value.value,
+    mode: mode.value,
+    ref: ref.value,
+    remarks: remarks.value
+  })
+ }).then(r=>r.json()).then(d=>{
+   toast(d.msg);
+   clearForm();
+   load();
+ });
+}
+
+function load(){
+ fetch(GS_URL,{
+  method:"POST",
+  body:JSON.stringify({action:"view"})
+ }).then(r=>r.json()).then(show);
+}
+
+function show(rows){
+ let h="";
+ rows.forEach(r=>{
+  h+=`<tr>
+  <td>${r[0]}</td>
+  <td>${toDDMMMYYYY(r[1])}</td>
+  <td>${r[2]}</td>
+  <td>${r[3]}</td>
+  <td>${r[4]}</td>
+  <td>${r[5]}</td>
+  <td>${r[7]}</td>
+  <td>${r[8]}</td>
+  <td>${r[9]}</td>
+  <td>${r[10]}</td>
+  <td>
+   <span class="action" onclick='edit(${JSON.stringify(r)})'>Edit</span> |
+   <span class="action" onclick='del(${r[0]})'>Delete</span>
+  </td>
+  </tr>`;
+ });
+ data.innerHTML=h;
+}
+
+function edit(r){
+ pid.value=r[0];
+ date.value=toInputDate(r[1]);
+ owner.value=r[2];
+ ptype.value=r[3];
+ survey.value=r[4];
+ area.value=r[5];
+ location.value=r[6];
+ value.value=r[7];
+ mode.value=r[8];
+ ref.value=r[9];
+ remarks.value=r[10];
+}
+
+function del(id){
+ if(confirm("Delete this property?")){
+  fetch(GS_URL,{
+   method:"POST",
+   body:JSON.stringify({action:"delete",propertyId:id})
+  }).then(r=>r.json()).then(d=>{
+    toast(d.msg);
+    load();
+  });
+ }
+}
+
+function toast(msg){
+ const t=document.getElementById("toast");
+ t.innerText=msg;
+ t.style.display="block";
+ setTimeout(()=>t.style.display="none",3000);
+}
+
+function clearForm(){
+ pid.value="";
+ date.value="";
+ owner.value="";
+ survey.value="";
+ area.value="";
+ location.value="";
+ value.value="";
+ ref.value="";
+ remarks.value="";
+}
+
+window.onload=load;
+</script>
+
+</body>
+</html>

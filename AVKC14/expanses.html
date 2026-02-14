@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Entry</title>
+
+<style>
+/* Base Styles */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #fff;
+}
+
+.header {
+  background: #c2185b;
+  color: #fff;
+  text-align: center;
+  padding: 15px;
+  position: relative;
+}
+
+.header h2 {
+  margin: 0;
+}
+
+.loading-msg {
+  font-size: 14px;
+  color: #fff;
+  margin-top: 5px;
+}
+
+/* Container and Input Styles */
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 15px;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  box-sizing: border-box;
+}
+
+button {
+  background: #c2185b;
+  color: #fff;
+  border: 0;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Table Styles */
+.table-wrapper {
+  overflow-x: auto; /* Enable horizontal scroll on small screens */
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  min-width: 900px; /* ensures table doesn't shrink too much */
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+  white-space: nowrap; /* Prevent text wrapping in cells */
+}
+
+th {
+  background: #f8bbd0;
+}
+
+.action {
+  cursor: pointer;
+  color: #c2185b;
+  font-weight: bold;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  display: none;
+  z-index: 1000;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+  input, select, button {
+    padding: 8px;
+    margin: 4px 0;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="header">
+  <h2>Expense Entry</h2>
+  <div id="loadingMsg" class="loading-msg">Loading... Please wait</div>
+</div>
+
+<div class="container">
+<input type="hidden" id="billNo">
+<input type="date" id="date">
+
+<select id="type">
+  <option>Issued</option>
+  <option>Received</option>
+</select>
+
+<select id="category">
+  <option>Rent</option><option>Salary</option><option>Electricity</option>
+  <option>Water</option><option>Travel</option><option>Food</option>
+  <option>Fuel</option><option>Maintenance</option><option>Tax</option>
+  <option>Stationery</option><option>Internet</option><option>Other</option>
+</select>
+
+<input id="desc" placeholder="Description">
+<input id="amount" type="number" placeholder="Amount">
+
+<select id="mode">
+  <option>Cash</option><option>UPI</option><option>Bank</option>
+</select>
+
+<input id="ref" placeholder="Reference No">
+
+<button onclick="save()">Save / Update</button>
+
+<!-- Table Wrapper for Scroll -->
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr>
+      <th>Bill</th><th>Date</th><th>Type</th><th>Category</th>
+      <th>Description</th><th>Amount</th><th>Mode</th><th>Ref</th><th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="data"></tbody>
+</table>
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const GS_URL = "https://script.google.com/macros/s/AKfycbyP-Gc7ZEKPvI8pwjIh_CeCzj4CwN2gkzwPuJfdFBGI-VBcWsbiLLcKq0LUnKWeijXaeQ/exec";
+
+// Format date to dd-MMM-yyyy
+function formatDate(d){
+  if(!d) return "";
+  const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dt=new Date(d);
+  if(isNaN(dt)) return d; // fallback if date is invalid
+  const day = ("0"+dt.getDate()).slice(-2);
+  const month = m[dt.getMonth()];
+  const year = dt.getFullYear();
+  return day+"-"+month+"-"+year;
+}
+
+function save(){
+  const action = billNo.value ? "edit" : "save";
+  fetch(GS_URL,{
+    method:"POST",
+    body:JSON.stringify({
+      action:action,
+      billNo:billNo.value,
+      date:formatDate(date.value),
+      type:type.value,
+      category:category.value,
+      desc:desc.value,
+      amount:amount.value,
+      mode:mode.value,
+      ref:ref.value
+    })
+  }).then(r=>r.json()).then(d=>{
+    toast(d.msg);
+    clear();
+    load();
+  });
+}
+
+function load(){
+  document.getElementById("loadingMsg").style.display = "block"; // show loading
+  fetch(GS_URL,{
+    method:"POST",
+    body:JSON.stringify({action:"view"})
+  }).then(r=>r.json()).then(show).finally(()=>{
+    document.getElementById("loadingMsg").style.display = "none"; // hide loading
+  });
+}
+
+function show(rows){
+  let h="";
+  rows.forEach(r=>{
+    // Force date format in table
+    const dateFormatted = formatDate(r[1]);
+    h+=`<tr>
+      <td>${r[0]}</td><td>${dateFormatted}</td><td>${r[2]}</td>
+      <td>${r[3]}</td><td>${r[4]}</td>
+      <td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td>
+      <td>
+        <span class="action" onclick='edit(${JSON.stringify(r)})'>Edit</span> |
+        <span class="action" onclick='del(${r[0]})'>Delete</span>
+      </td>
+    </tr>`;
+  });
+  data.innerHTML=h;
+}
+
+function edit(r){
+  billNo.value=r[0];
+  type.value=r[2];
+  category.value=r[3];
+  desc.value=r[4];
+  amount.value=r[5];
+  mode.value=r[6];
+  ref.value=r[7];
+  // Convert table date back to yyyy-mm-dd for input type=date
+  const dt = new Date(r[1]);
+  if(!isNaN(dt)) date.value = dt.toISOString().substr(0,10);
+}
+
+function del(b){
+  if(confirm("Delete this expense?")){
+    fetch(GS_URL,{
+      method:"POST",
+      body:JSON.stringify({action:"delete",billNo:b})
+    }).then(r=>r.json()).then(d=>{
+      toast(d.msg);
+      load();
+    });
+  }
+}
+
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",3000);
+}
+
+function clear(){
+  billNo.value=""; desc.value=""; amount.value=""; ref.value=""; date.value="";
+}
+
+window.onload=load;
+</script>
+</body>
+</html>

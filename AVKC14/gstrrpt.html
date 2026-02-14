@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complete GST Rent Report</title>
+
+<style>
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial;background:#f4f6f8;}
+.container{max-width:1350px;margin:auto;padding:10px;}
+
+h2,h3{text-align:center;color:#c2185b;margin:6px 0;}
+h5{text-align:center;color:blue;margin:6px 0;}
+
+.print-date{text-align:right;font-size:12px;font-weight:bold;margin-bottom:5px;}
+
+.card{
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,.1);
+margin-bottom:15px;
+}
+
+.row{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+gap:12px;
+align-items:end;
+}
+
+label{font-size:12px;font-weight:bold;}
+
+select,input{
+width:100%;
+padding:8px;
+border:1px solid #ccc;
+border-radius:6px;
+}
+
+button{
+width:100%;
+padding:9px;
+border:none;
+border-radius:8px;
+background:#c2185b;
+color:#fff;
+font-weight:bold;
+cursor:pointer;
+}
+
+.table-wrap{overflow-x:auto;}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:11px;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #ccc;
+padding:5px;
+text-align:center;
+}
+
+th{
+background:#f06292;
+color:#fff;
+}
+
+.total-row{
+font-weight:bold;
+background:#f2f2f2;
+}
+
+@page{size:A4 portrait;margin:8mm;}
+
+@media print{
+button{display:none;}
+body{background:#fff;}
+.card{box-shadow:none;border:1px solid #ccc;}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h5>AVKC சங்கம் - கோவில்பட்டி</h5>
+<h2> GST Report</h2>
+
+<!-- FILTER SECTION -->
+<div class="card">
+<div class="row">
+
+<div>
+<label>Transaction ID</label>
+<select id="filterTransaction">
+<option value="">All</option>
+<option value="கடைகள் வாடகை ரசீது">கடைகள் வாடகை ரசீது</option>
+<option value="ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது</option>
+<option value="அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது">அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது</option>
+<option value="ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது</option>
+</select>
+</div>
+
+<div>
+<label>From Date</label>
+<input type="date" id="fromDate">
+</div>
+
+<div>
+<label>To Date</label>
+<input type="date" id="toDate">
+</div>
+
+<div>
+<label>Select Month</label>
+<select id="filterMonth">
+<option value="">All</option>
+<option value="0">January</option>
+<option value="1">February</option>
+<option value="2">March</option>
+<option value="3">April</option>
+<option value="4">May</option>
+<option value="5">June</option>
+<option value="6">July</option>
+<option value="7">August</option>
+<option value="8">September</option>
+<option value="9">October</option>
+<option value="10">November</option>
+<option value="11">December</option>
+</select>
+</div>
+
+<div>
+<label>Select Year</label>
+<input type="number" id="filterYear" placeholder="2026">
+</div>
+
+<div>
+<button onclick="applyFilter()">🔍 Apply Filter</button>
+</div>
+
+</div>
+</div>
+
+<!-- BILL DETAILS -->
+<div class="card">
+<div class="print-date" id="printDate"></div>
+<h3>Bill Details</h3>
+<div class="table-wrap">
+<table id="detailTable">
+<thead>
+<tr>
+<th>Bill No</th>
+<th>Date</th>
+<th>Transaction ID</th>
+<th>Tenant</th>
+<th>Mobile</th>
+<th>Shop</th>
+<th>Months</th>
+<th>Rent/Month</th>
+<th>Gross</th>
+<th>Discount</th>
+<th>Tax %</th>
+<th>Tax Amt</th>
+<th>Net</th>
+<th>Now Paid</th>
+<th>Pending</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<!-- MONTH WISE GST SUMMARY -->
+<div class="card">
+<h3>Month Wise GST Summary</h3>
+<div class="table-wrap">
+<table id="gstrTable">
+<thead>
+<tr>
+<th>Month-Year</th>
+<th>Bill Count</th>
+<th>Total Gross</th>
+<th>Total Discount</th>
+<th>Total Taxable</th>
+<th>Total GST</th>
+<th>Total Net</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<button onclick="window.print()">🖨 Print Report</button>
+</div>
+
+</div>
+
+<script>
+
+const API_URL="https://script.google.com/macros/s/AKfycbyogWMiTNNixoMp7E0NEA7-z_y0Syxxrp_NrG8hWhI7bpPRNokcNAKYo1EyZxxx6qnldA/exec";
+let allPayments=[];
+
+function formatDate(d){
+if(!d) return "";
+const date=new Date(d);
+const day=String(date.getDate()).padStart(2,'0');
+const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+return `${day}-${months[date.getMonth()]}-${date.getFullYear()}`;
+}
+
+async function loadPayments(){
+const res=await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({action:"getPayments"})
+});
+const data=await res.json();
+allPayments=data.data||[];
+
+document.getElementById("printDate").innerText="Print Date & Time : "+new Date().toLocaleString();
+
+renderDetails(allPayments);
+renderGSTR(allPayments);
+}
+
+function applyFilter(){
+
+let filtered=[...allPayments];
+
+const tId=document.getElementById("filterTransaction").value;
+const fromDate=document.getElementById("fromDate").value;
+const toDate=document.getElementById("toDate").value;
+const month=document.getElementById("filterMonth").value;
+const year=document.getElementById("filterYear").value;
+
+if(tId)
+filtered=filtered.filter(p=>p.Transaction_Id===tId);
+
+if(fromDate)
+filtered=filtered.filter(p=>new Date(p.PaymentDate)>=new Date(fromDate));
+
+if(toDate)
+filtered=filtered.filter(p=>new Date(p.PaymentDate)<=new Date(toDate));
+
+if(month!=="")
+filtered=filtered.filter(p=>new Date(p.PaymentDate).getMonth()==month);
+
+if(year)
+filtered=filtered.filter(p=>new Date(p.PaymentDate).getFullYear()==year);
+
+renderDetails(filtered);
+renderGSTR(filtered);
+}
+
+function renderDetails(data){
+const body=document.querySelector("#detailTable tbody");
+body.innerHTML="";
+
+let totalGross=0,totalDiscount=0,totalTax=0,totalNet=0,totalNow=0,totalPending=0;
+
+data.forEach(r=>{
+
+const gross=parseFloat(r.Gross_Amount)||0;
+const discount=parseFloat(r.Discount)||0;
+const tax=parseFloat(r.Tax_Amount)||0;
+const net=parseFloat(r.Net_Amount)||0;
+const now=parseFloat(r.Now_Paid)||0;
+const pending=parseFloat(r.Pending)||0;
+
+totalGross+=gross;
+totalDiscount+=discount;
+totalTax+=tax;
+totalNet+=net;
+totalNow+=now;
+totalPending+=pending;
+
+body.innerHTML+=`
+<tr>
+<td>${r.Bill_No||""}</td>
+<td>${formatDate(r.PaymentDate)}</td>
+<td>${r.Transaction_Id||""}</td>
+<td>${r["Tenant Name"]||""}</td>
+<td>${r.Mobile||""}</td>
+<td>${r.Shop_No||""}</td>
+<td>${r.Months||""}</td>
+<td>${r.Rental_Per_Month||0}</td>
+<td>${gross.toFixed(2)}</td>
+<td>${discount.toFixed(2)}</td>
+<td>${r.Tax_Percentage||0}%</td>
+<td>${tax.toFixed(2)}</td>
+<td>${net.toFixed(2)}</td>
+<td>${now.toFixed(2)}</td>
+<td>${pending.toFixed(2)}</td>
+</tr>`;
+});
+
+body.innerHTML+=`
+<tr class="total-row">
+<td colspan="8">TOTAL</td>
+<td>${totalGross.toFixed(2)}</td>
+<td>${totalDiscount.toFixed(2)}</td>
+<td></td>
+<td>${totalTax.toFixed(2)}</td>
+<td>${totalNet.toFixed(2)}</td>
+<td>${totalNow.toFixed(2)}</td>
+<td>${totalPending.toFixed(2)}</td>
+</tr>`;
+}
+
+function renderGSTR(data){
+const body=document.querySelector("#gstrTable tbody");
+body.innerHTML="";
+let grouped={};
+
+data.forEach(r=>{
+const d=new Date(r.PaymentDate);
+const key=d.toLocaleString('default',{month:'long'})+"-"+d.getFullYear();
+
+const gross=parseFloat(r.Gross_Amount)||0;
+const discount=parseFloat(r.Discount)||0;
+const taxable=gross-discount;
+const tax=parseFloat(r.Tax_Amount)||0;
+const net=parseFloat(r.Net_Amount)||0;
+
+if(!grouped[key])
+grouped[key]={count:0,gross:0,discount:0,taxable:0,tax:0,net:0};
+
+grouped[key].count++;
+grouped[key].gross+=gross;
+grouped[key].discount+=discount;
+grouped[key].taxable+=taxable;
+grouped[key].tax+=tax;
+grouped[key].net+=net;
+});
+
+for(let k in grouped){
+body.innerHTML+=`
+<tr>
+<td>${k}</td>
+<td>${grouped[k].count}</td>
+<td>${grouped[k].gross.toFixed(2)}</td>
+<td>${grouped[k].discount.toFixed(2)}</td>
+<td>${grouped[k].taxable.toFixed(2)}</td>
+<td>${grouped[k].tax.toFixed(2)}</td>
+<td>${grouped[k].net.toFixed(2)}</td>
+</tr>`;
+}
+}
+
+loadPayments();
+
+</script>
+</body>
+</html>

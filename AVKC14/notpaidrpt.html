@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Rent Search</title>
+
+<style>
+body{font-family:Arial;margin:0;background:#fff}
+header{background:#c2185b;color:#fff;padding:15px;text-align:center;font-size:22px}
+
+.card{
+  border:2px solid #f48fb1;
+  border-radius:10px;
+  padding:15px;
+  margin:10px
+}
+
+input{
+  width:95%;
+  padding:8px;
+  margin:6px 0;
+  border:1px solid #f48fb1;
+  border-radius:5px
+}
+
+button{
+  background:#c2185b;
+  color:#fff;
+  border:none;
+  padding:8px 12px;
+  border-radius:6px;
+  margin:2px
+}
+
+#result{
+  margin-top:10px;
+  padding:10px;
+  border:1px solid #f48fb1;
+  border-radius:8px;
+}
+
+.image-box{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.image-box img{
+  width:100px;
+  height:100px;
+  object-fit:cover;
+  border:2px solid #f48fb1;
+  border-radius:6px;
+}
+
+.no-photo{
+  width:100px;
+  height:100px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px solid #ccc;
+  border-radius:6px;
+  color:red;
+  font-size:12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>Search Tenant</header>
+
+<div class="card">
+<input id="searchShop" placeholder="Enter Shop No">
+<button onclick="search()">Search</button>
+
+<div id="result"></div>
+</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbwnY99_hETH8F_nYcS1jbW_5PfuGXWHVA9ZIf-xKoJ3BjEcSZ455K38ey7wDh6qlIsSvw/exec";
+
+function search(){
+
+  const shop=searchShop.value.trim();
+  if(!shop){
+    alert("Enter Shop No");
+    return;
+  }
+
+  result.innerHTML="Searching...";
+
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({action:"get"})
+  })
+  .then(r=>r.json())
+  .then(res=>{
+
+    let found=null;
+
+    res.forEach(r=>{
+      if(r[3]==shop){
+        found=r;
+      }
+    });
+
+    if(!found){
+      result.innerHTML="<span style='color:red'>No Tenant Found</span>";
+      return;
+    }
+
+    /* ✅ MULTIPLE IMAGE SUPPORT (SAME AS YOUR WORKING METHOD) */
+
+    let imageHTML="";
+    let images=[];
+
+    try{
+      images=JSON.parse(found[15] || "[]");
+    }catch(e){
+      images=[];
+    }
+
+    if(images.length>0){
+      images.forEach(img=>{
+        imageHTML+=`<img src="${img}">`;
+      });
+    }else{
+      imageHTML=`<div class="no-photo">No Photo</div>`;
+    }
+
+    result.innerHTML=`
+      <div class="image-box">
+        ${imageHTML}
+      </div>
+
+      <p><b>Complex Name:</b> ${found[1]}</p>
+      <p><b>Complex No:</b> ${found[2]}</p>
+      <p><b>Shop No:</b> ${found[3]}</p>
+      <p><b>Shop Name:</b> ${found[4]}</p>
+      <p><b>Tenant Name:</b> ${found[5]}</p>
+      <p><b>Mobile:</b> ${found[7]}</p>
+      <p><b>Rent:</b> Rs. ${found[12]}</p>
+      <p><b>Advance:</b> Rs. ${found[13]}</p>
+    `;
+
+  })
+  .catch(()=>{
+    result.innerHTML="<span style='color:red'>Server Error</span>";
+  });
+
+}
+</script>
+
+</body>
+</html>
