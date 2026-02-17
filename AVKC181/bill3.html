@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rent Payment System</title>
+
+<style>
+/* ===== GLOBAL ===== */
+body{
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #fde4ec;
+  padding: 8px;
+}
+
+.container{
+  max-width: 900px;
+  margin: auto;
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(194,24,91,0.35);
+}
+
+h3,h4{
+  color: #c2185b;
+  margin: 10px 0;
+}
+  
+  h2{
+  color: blue;
+  margin: 10px 0;
+}
+  
+  h2{
+  color:Blue;
+  margin: 10px 0;
+}
+
+label{
+  display: block;
+  margin-top: 10px;
+  font-weight: bold;
+  color: #880e4f;
+}
+
+/* ===== FORM ELEMENTS ===== */
+input,
+textarea,
+button{
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #c2185b;
+  box-sizing: border-box;
+}
+
+textarea{
+  resize: none;
+}
+
+button{
+  background: #c2185b;
+  color: #ffffff;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover{
+  background: #ad1457;
+}
+
+/* ===== MONTH CHECKBOX ===== */
+#months label{
+  display: inline-block;
+  margin-right: 10px;
+  font-weight: normal;
+  color: #4a0033;
+}
+
+/* ===== TOTAL ===== */
+#total,
+#pending{
+  color: #ad1457;
+  font-size: 20px;
+}
+
+/* ===== TABLE ===== */
+.table-wrap{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+}
+
+table{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+th,
+td{
+  border: 1px solid #c2185b;
+  padding: 8px;
+  text-align: center;
+  font-size: 14px;
+}
+
+th{
+  background: #c2185b;
+  color: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+td button{
+  padding: 6px 10px;
+  font-size: 14px;
+  margin: 2px;
+  border-radius: 6px;
+}
+
+/* ===== PRINT RECEIPT ===== */
+.bill{
+  display: none;
+  padding: 20px;
+  color: #000000;
+}
+
+/* ===== PRINT HEADER ===== */
+.print-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #000;
+  padding: 10px 0;
+}
+
+.logo{
+  width: 70px;
+  height: auto;
+}
+
+.print-title{
+  flex: 1;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.print-title .line1{
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.print-title .line2{
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* ===== PRINT BODY ===== */
+.bill-body{
+  display: flex;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.left-box,
+.right-box{
+  width: 50%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.left-box{
+  border-right: 1px dashed #000;
+}
+
+.customer-img{
+  width: 120px;
+  height: 140px;
+  border: 1px solid #000;
+  margin-top: 10px;
+}
+
+/* ===== PRINT FOOTER ===== */
+.bill-footer{
+  text-align: right;
+  margin-top: 20px;
+  font-weight: bold;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px){
+  .container{
+    padding: 10px;
+  }
+
+  .left-box,
+  .right-box{
+    width: 100%;
+    border: none;
+  }
+
+  h2{
+    font-size: 20px;
+  }
+
+  table{
+    min-width: 750px;
+  }
+}
+
+/* =========================
+   A4 PRINT FORMAT – FINAL
+   ========================= */
+
+@media print {
+
+  /* A4 PAGE */
+  @page{
+    size: A4;
+    margin: 15mm;
+  }
+
+  body *{
+    visibility: hidden;
+  }
+
+  .bill, .bill *{
+    visibility: visible;
+  }
+
+  .bill{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    font-size: 12.5px;
+    color: #000;
+  }
+
+  /* ===== TABLE FIX ===== */
+  table{
+    width: 90%;
+    table-layout: fixed;   /* 🔑 KEY FIX */
+    border-collapse: collapse;
+  }
+
+  th, td{
+    border: 1px solid #000;
+    padding: 6px 4px;
+    text-align: center;
+    vertical-align: middle;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  th{
+    font-weight: bold;
+    background: #f3f3f3;
+    font-size: 12.5px;
+  }
+
+  td{
+    font-size: 12.5px;
+  }
+
+  /* ===== PAYMENT TABLE COLUMN WIDTHS ===== */
+  .bill table th:nth-child(1),
+  .bill table td:nth-child(1){width: 8%;}   /* Bill No */
+
+  .bill table th:nth-child(2),
+  .bill table td:nth-child(2){width: 12%;}  /* Date */
+
+  .bill table th:nth-child(3),
+  .bill table td:nth-child(3){width: 18%;}  /* Month */
+
+  .bill table th:nth-child(4),
+  .bill table td:nth-child(4){width: 12%;}  /* Rental */
+
+  .bill table th:nth-child(5),
+  .bill table td:nth-child(5){width: 8%;}   /* Tax */
+
+  .bill table th:nth-child(6),
+  .bill table td:nth-child(6){width: 12%;}  /* Discount */
+
+  .bill table th:nth-child(7),
+  .bill table td:nth-child(7){width: 15%;}  /* Paid */
+
+  .bill table th:nth-child(8),
+  .bill table td:nth-child(8){width: 15%;}  /* Pending */
+
+  /* ===== CUSTOMER DETAILS TABLE ===== */
+  .bill table.customer-table td{
+    text-align: left;
+    font-size: 13px;
+  }
+
+  /* ===== FOOTER ===== */
+  .bill-footer{
+    margin-top: 25px;
+    text-align: right;
+    font-size: 13px;
+  }
+}
+  
+/* ===== PRINT RECEIPT ===== */
+.bill{display:none;padding:20px}
+
+/* HEADER */
+.print-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:2px solid #000;
+  padding:10px 0;
+}
+
+.logo{
+  width:80px;
+  height:auto;
+}
+
+.print-title{
+  flex:1;
+  text-align:center;
+  padding:0 10px;
+}
+
+.print-title .line1{
+  font-size:20px;
+  font-weight:bold;
+}
+
+.print-title .line2{
+  font-size:14px;
+  margin-top:4px;
+  line-height:1.4;
+}
+/* BODY */
+.bill-body{display:flex;margin-top:20px}
+.left-box,.right-box{width:50%;padding:10px}
+.left-box{border-right:1px dashed #000}
+.customer-img{width:120px;height:140px;border:1px solid #000;margin-top:10px}
+
+/* FOOTER */
+.bill-footer{text-align:right;margin-top:20px;font-weight:bold}
+
+/* PRINT */
+@media print{
+  body *{visibility:hidden}
+  .bill,.bill *{visibility:visible}
+  .bill{position:absolute;top:0;left:0;width:100%}
+  @page{size:A4;margin:15mm}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2 align="center">Shop Rent Payment</h2>
+
+<input type="number" id="mobile" placeholder="Tenant Mobile">
+<button onclick="searchTenant()">Search Tenant</button>
+
+<div id="tenantInfo"></div>
+
+<label>Payment Date</label>
+<input type="date" id="payDate">
+
+<div id="months" style="display:none">
+<h4>Months Paid</h4>
+<script>
+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+.forEach(m=>document.write(
+  `<label><input type="checkbox" value="${m}" onchange="calc()"> ${m}</label>`
+));
+</script>
+</div>
+
+<label>Discount ₹</label>
+<input type="number" id="discount" value="0" oninput="calc()">
+
+<label>Tax %</label>
+<input type="number" id="tax" value="0" oninput="calc()">
+
+<label>Now Paying ₹</label>
+<input type="number" id="paid" value="0" oninput="calc()">
+
+<label>Remarks</label>
+<textarea id="remarks"></textarea>
+
+<h3>Total : ₹ <span id="total">0</span></h3>
+<h3>Pending : ₹ <span id="pending">0</span></h3>
+
+<button onclick="save()">Save & Print</button>
+
+<div class="bill" id="bill"></div>
+
+<h3>All Payments</h3>
+<table>
+<thead>
+<tr>
+<th>Date</th><th>Name</th><th>Mobile</th><th>Shop</th>
+<th>Months</th><th>Total</th><th>Paid</th><th>Pending</th><th>Actions</th>
+</tr>
+</thead>
+<tbody id="paymentsTableBody"></tbody>
+</table>
+</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbzRmLFZkjHlowHGHS9RE3jsHAduVDksjSLttn1BNaWa57bulK-_6WGhmBebOO9YhIX54A/exec";
+let tenant={};
+
+window.onload=()=>{
+  const d=new Date();
+  payDate.value=d.toISOString().split("T")[0];
+  loadPayments();
+};
+
+/* dd-MMM-yyyy */
+function formatDate(v){
+  const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const p=v.split("-");
+  return `${p[2]}-${m[p[1]-1]}-${p[0]}`;
+}
+
+function formatDateReverse(v){
+  const [dd,m,yyyy]=v.split("-");
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${yyyy}-${String(months.indexOf(m)+1).padStart(2,"0")}-${dd}`;
+}
+
+function searchTenant(){
+  fetch(API,{method:"POST",body:JSON.stringify({action:"searchTenant",mobile:mobile.value})})
+  .then(r=>r.json()).then(d=>{
+    tenant=d.tenant;
+    tenantInfo.innerHTML=`<hr>
+<b>Name:</b> ${tenant.tenantName}<br>
+<b>Shop:</b> ${tenant.shopNo}<br>
+<b>Mobile:</b> ${tenant.mobile}<br>
+<b>Rent:</b> ₹${tenant.rent}`;
+    months.style.display="block";
+    calc();
+  });
+}
+
+function calc(){
+  if(!tenant.rent) return;
+  const c=document.querySelectorAll("#months input:checked").length;
+  const base=c*tenant.rent;
+  const disc=+discount.value||0;
+  const taxAmt=(base-disc)*(+tax.value||0)/100;
+  const totalAmt=base-disc+taxAmt;
+  total.innerText=Math.round(totalAmt);
+  pending.innerText=Math.round(totalAmt-(+paid.value||0));
+}
+
+function save(){
+  const monthsPaid=[...document.querySelectorAll("#months input:checked")].map(x=>x.value);
+  const base=monthsPaid.length*tenant.rent;
+  const disc=+discount.value||0;
+  const taxAmt=(base-disc)*(+tax.value||0)/100;
+  const totalAmt=base-disc+taxAmt;
+  const paidAmt=+paid.value||0;
+
+  const data={
+    action:"savePayment",
+    paymentDate:formatDate(payDate.value),
+    tenantId:tenant.id,
+    tenantName:tenant.tenantName,
+    mobile:tenant.mobile,
+    shopNo:tenant.shopNo,
+    months:monthsPaid.join(", "),
+    rent:tenant.rent,
+    totalAmount:Math.round(totalAmt),
+    paidAmount:paidAmt,
+    pendingAmount:Math.round(totalAmt-paidAmt),
+    remarks:remarks.value
+  };
+
+  fetch(API,{method:"POST",body:JSON.stringify(data)})
+  .then(r=>r.json()).then(()=>{
+    showBill(data);
+    loadPayments();
+  });
+}
+
+function showBill(d){
+  bill.innerHTML=`
+  <div class="print-header">
+    <img src="1.jpg" class="logo">
+
+    <div class="print-title">
+      <div class="line1"> <h2>AVKC சங்கம் - கோவில்பட்டி</h2></div>
+      <div class="line2">
+      <h3>  ஆயிரவைசிய காசுக்கார செட்டிப்பிள்னைகள் சங்கத்திற்கு பாத்தியப்பட்ட கடைகள் வாடகை ரசீது</h3>
+      </div>
+    </div>
+
+    <img src="2.png" class="logo">
+  </div>
+
+  <!-- CUSTOMER DETAILS -->
+  <table width="100%" style="margin-top:15px;border-collapse:collapse">
+    <tr>
+      <td width="30%" rowspan="2" align="center">
+        <img src="customer.jpg" class="customer-img">
+      </td>
+      <td width="70%">
+       <h2> <b>பெயர் :</b> ${d.tenantName} &nbsp;&nbsp;
+        <b>மொபைல் :</b> ${d.mobile}</h2>
+      </td>
+    </tr>
+    <tr>
+      <td>
+       <h3> <b>கடை எண் :</b> ${d.shopNo} &nbsp;&nbsp;
+        <b>மாத வாடகை :</b> ₹${tenant.rent}</h3>
+      </td>
+    </tr>
+  </table>
+
+  <!-- PAYMENT DETAILS TABLE -->
+  <h3 style="margin-top:20px">Payment Details</h3>
+
+  <h2><table width="100%" border="1" cellspacing="0" cellpadding="6">
+<tr>
+      <th>Bill No</th>
+      <th>Date</th>
+      <th>Month of Pay</th>
+      <th>Rental</th>
+      <th>Tax</th>
+      <th>Discount</th>
+      <th>Now Paying</th>
+      <th>Pending</th>
+    </tr>
+    <tr align="center">
+      <td>AUTO</td>
+      <td>${d.paymentDate}</td>
+      <td>${d.months}</td>
+      <td>₹${tenant.rent}</td>
+      <td>${tax.value || 0}%</td>
+      <td>₹${discount.value || 0}</td>
+      <td>₹${d.paidAmount}</td>
+      <td>₹${d.pendingAmount}</td>
+    </tr>
+  </table></h2>
+
+  <!-- REMARKS -->
+  <p style="margin-top:10px">
+    <b>Remarks :</b> ${d.remarks || "-"}
+  </p>
+
+  <!-- TERMS -->
+  <div class="tamil-header">
+    <h3>வாடகை நிபந்தனைகள்</h3>
+    1.மாத வாடகை பேசி ஒப்புக்கொண்டு மூன்று மாத வாடகை அட்வான்ஸாக செலுத்த வேண்டும். மாத வாடகையை மறுமாதம் 5ம் தேதிக்குள் செலுத்த வேண்டும். தவறினால் வட்டியுடன் சேர்த்து வசூலிக்கப்படும்.<br>
+2. எக்காரணத்தை முன்னிட்டும் உள்வாடகைக்கோ வேறு நபருக்கோ மாற்றிக் கொள்ளவோ வாடகைதாரருக்கு உரிமை கிடையாது. கட்டிடம்
+தேவையில்லையென்றால் வாடகை பாக்கிகள் சகிதம் எங்கள் வசம் ஒப்புவிக்க வேண்டும். வாடகைதாரர்கள் ரிப்பேர் செய்துகொள்ள உரிமை கிடையாது.<br>
+3. எலக்ட்ரிக் சார்ஜ்களை மாத-மாதம் வாடகைதாரர்கள் செலுத்திக் கொள்ளவேண்டும்.<br>
+4. கட்டிடம் காலிசெய்யும் போது வாடகைப் பாக்கிகள் பூராவும் செலுத்திவிட்டு அட்வான்ஸ் தொகையை வாபஸ் பெற்றுக்கொள்ள வேண்டும். ஆக்கிரமிப்புக்கு இடம் கொடுக்கக் கூடாது ஆக்கிரமிப்பு செய்யவும் கூடாது.<br>
+5. இதன்படி நடந்து வருவேனாகவும்.<br>
+6. அரசால் விதிக்கப்படும் சொத்து வரி, நகராட்சி வரி, சேவை வரி (GST உட்பட) அல்லது
+இதர எந்த வகையான வரிகளும் நடைமுறையில் இருந்தால்,
+அதற்கான தொகையை வாடகைதாரரே செலுத்த வேண்டும்.<br>
+7. வரி விகிதத்தில் அரசு மாற்றம் செய்தால் அல்லது புதிய வரி விதிக்கப்பட்டால்,
+அதனால் ஏற்படும் கூடுதல் தொகை உடனடியாக வாடகையில் சேர்க்கப்பட்டு
+வாடகைதாரரிடமிருந்து வசூலிக்கப்படும்.<br>
+8. வரி செலுத்தத் தவறினால் அல்லது தாமதமானால்,
+அதனால் ஏற்படும் அபராதம், வட்டி அல்லது சட்ட நடவடிக்கைகளுக்கான
+முழுப் பொறுப்பும் வாடகைதாரரையே சாரும்.<br>
+   </div>
+
+  <!-- SIGNATURE -->
+  <div class="bill-footer">
+   <h3> வசூலித்தவர் கையொப்பம் _____________<br><br>
+    வாடகைதாரர் கையொப்பம் _____________</h3>
+  </div>
+  `;
+  bill.style.display="block";
+  window.print();
+}
+
+function loadPayments(){
+  fetch(API,{method:"POST",body:JSON.stringify({action:"getPayments"})})
+  .then(r=>r.json()).then(d=>{
+    paymentsTableBody.innerHTML="";
+    d.payments.forEach(p=>{
+      paymentsTableBody.innerHTML+=`
+      <tr>
+        <td>${p["Payment Date"]}</td>
+        <td>${p["Tenant Name"]}</td>
+        <td>${p["Mobile"]}</td>
+        <td>${p["Shop No"]}</td>
+        <td>${p["Months Paid"]}</td>
+        <td>₹${p["Total Amount"]}</td>
+        <td>₹${p["Paid Amount"]}</td>
+        <td>₹${p["Pending Amount"]}</td>
+        <td>
+          <button onclick='editPayment(${JSON.stringify(p)})'>Edit</button>
+          <button onclick='deletePayment(${p.row})'>Delete</button>
+        </td>
+      </tr>`;
+    });
+  });
+}
+
+function deletePayment(row){
+  if(confirm("Delete this record?")){
+    fetch(API,{method:"POST",body:JSON.stringify({action:"deletePayment",row})})
+    .then(()=>loadPayments());
+  }
+}
+</script>
+
+</body>
+</html>

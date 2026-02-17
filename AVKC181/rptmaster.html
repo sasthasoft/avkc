@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rental Reports</title>
+
+<!-- Font Awesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --pink:#c2185b;
+  --pink-dark:#a3154c;
+  --bg:#f5f5f5;
+  --white:#ffffff;
+  --shadow:0 4px 12px rgba(0,0,0,0.12);
+}
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family:Segoe UI, Arial, sans-serif;
+  background:var(--bg);
+}
+
+header{
+  background:var(--pink);
+  color:white;
+  text-align:center;
+  padding:14px;
+}
+
+header h2{
+  margin:0;
+  font-size:18px;
+  letter-spacing:0.5px;
+}
+
+#dashboard{
+  padding:20px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:18px;
+}
+
+.card{
+  background:white;
+  border-radius:14px;
+  padding:22px 10px;
+  text-align:center;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  transition:0.3s;
+  font-weight:600;
+  font-size:15px;
+  color:#333;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+
+.card i{
+  font-size:28px;
+  color:var(--pink);
+  transition:0.3s;
+}
+
+.card:hover{
+  background:var(--pink);
+  color:white;
+  transform:translateY(-5px);
+}
+
+.card:hover i{
+  color:white;
+  transform:scale(1.2);
+}
+
+footer{
+  background:var(--pink-dark);
+  color:white;
+  padding:15px 10px;
+  margin-top:20px;
+  text-align:center;
+  font-size:14px;
+}
+
+@media(max-width:600px){
+  header h2{font-size:16px;}
+  .card{font-size:14px;padding:18px 8px;}
+  .card i{font-size:24px;}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2> Master Reports</h2>
+</header>
+
+<div id="dashboard">
+
+  <div class="card" onclick="openPage('daterpt.html')">
+    <i class="fa-solid fa-calendar-days"></i>
+     Rental Date Report
+  </div>
+
+  <div class="card" onclick="openPage('monthrpt.html')">
+    <i class="fa-solid fa-calendar-week"></i>
+   Rental Month Wise Report
+  </div>
+
+  <div class="card" onclick="openPage('Transactionrpt.html')">
+    <i class="fa-solid fa-receipt"></i>
+   Rental Transaction Report
+  </div>
+<div class="card" onclick="openPage('mobilerpt.html')">
+    <i class="fa-solid fa-mobile-screen-button"></i>
+    Rental Mobile Number Wise Report
+</div>
+  
+  <div class="card" onclick="openPage('billnorpt.html')">
+    <i class="fa-solid fa-file-invoice"></i>
+   Rental Bill Number Wise Report
+</div>
+  
+  <div class="card" onclick="openPage('gstrrpt.html')">
+    <i class="fa-solid fa-file-invoice-dollar"></i>
+   Rental GSTR Report
+  </div>
+
+  <div class="card" onclick="openPage('expanses_view.html')">
+    <i class="fa-solid fa-money-bill-wave"></i>
+    Expanses Report
+  </div>
+
+  <div class="card" onclick="openPage('landrpt.html')">
+    <i class="fa-solid fa-map-location-dot"></i>
+    Land Report
+  </div>
+
+  <div class="card" onclick="openPage('newentryview.html')">
+    <i class="fa-solid fa-users"></i>
+   Rental Tenent Report
+  </div>
+
+  <div class="card" onclick="openPage('pendingrpt.html')">
+    <i class="fa-solid fa-hourglass-half"></i>
+    Rental Pending Amount Report
+  </div>
+
+  <div class="card" onclick="openPage('notpaidrpt.html')">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    Not Pay Summary Rental Report
+  </div>
+  
+    <div class="card" onclick="openPage('notpaidrpt2.html')">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    Not Pay Detail Rental Report
+  </div>
+
+</div>
+
+<footer>
+   Powered By, Sastha Software |
+  <i class="fa-solid fa-phone"></i> Call : (+91) 6383003056
+</footer>
+
+<script>
+function openPage(page){
+  window.location.href = page;
+}
+</script>
+
+</body>
+</html>
