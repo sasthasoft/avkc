@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Rental Management</title>
+<style>
+body{
+  font-family: Arial,sans-serif;
+  margin:0;
+  background:#f5f5f5;
+}
+
+/* HEADER */
+header{
+  background:#c2185b;
+  color:#fff;
+  padding:15px;
+  text-align:center;
+  font-size:22px;
+}
+
+/* SEARCH BAR */
+.search-box{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px;
+  background:#fce4ec;
+}
+.search-box input{
+  padding:8px;
+  border:1px solid #c2185b;
+  border-radius:6px;
+  width:180px;
+}
+.search-box button{
+  padding:8px 12px;
+  background:#c2185b;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+/* LOADING MESSAGE */
+#loadingMessage{
+  text-align:center;
+  font-size:20px;
+  color:#c2185b;
+  margin:20px 0;
+}
+
+/* CARD VIEW */
+.list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  padding:12px;
+  justify-content:center;
+}
+.card{
+  width:300px;
+  background:#fff;
+  border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);
+  overflow:hidden;
+}
+.card img{
+  width:60px;
+  height:60px;
+  object-fit:cover;
+  border-radius:6px;
+  margin-right:10px;
+}
+.card-body{
+  padding:10px;
+}
+.card-body h3{
+  margin:0;
+  color:#c2185b;
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  font-size:18px;
+}
+.card-body span.tenantName{
+  color:#880e4f; /* Dark pink */
+  margin-left:10px;
+  font-weight:bold;
+}
+.card-body p{
+  margin:4px 0;
+  font-size:14px;
+}
+.card-body button{
+  width:100%;
+  background:#c2185b;
+  color:#fff;
+  border:none;
+  padding:8px;
+  border-radius:6px;
+  margin-top:6px;
+  cursor:pointer;
+}
+
+/* PRINT PREVIEW */
+#previewBox{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:#fff;
+  overflow:auto;
+  padding:10px;
+  z-index:9999;
+}
+.noPrint{
+  background:#c2185b;
+  color:#fff;
+  border:none;
+  padding:8px 12px;
+  border-radius:6px;
+  margin:5px;
+  cursor:pointer;
+}
+
+/* PRINT PAGE */
+.print-page{
+  width:210mm;
+  min-height:297mm;
+  margin:auto;
+  padding:10mm;
+  box-sizing:border-box;
+}
+
+/* HEADER WITH LOGOS */
+.print-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:2px solid #c2185b;
+  padding-bottom:6px;
+  margin-bottom:10px;
+}
+.print-header img{
+  width:70px;
+}
+.print-header-title{
+  flex:1;
+  text-align:center;
+  font-size:22px;
+  font-weight:bold;
+  color:#c2185b;
+}
+
+/* CUSTOMER IMAGES + TENANT NAMES */
+.print-tenants{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:10px;
+  align-items:center;
+}
+.print-tenants div{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid #c2185b;
+  padding:4px 6px;
+  border-radius:6px;
+}
+.print-tenants img{
+  width:50px;
+  height:50px;
+  object-fit:cover;
+  border-radius:4px;
+}
+.print-tenants span{
+  color:#880e4f;
+  font-weight:bold;
+  font-size:14px;
+}
+
+/* DETAILS TABLE */
+.print-table{
+  width:99%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+.print-table th{
+  background:#f48fb1;
+  border:1px solid #c2185b;
+  padding:6px;
+  text-align:left;
+  width:35%;
+}
+.print-table td{
+  border:1px solid #c2185b;
+  padding:6px;
+}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .card{
+    width:90%;
+  }
+  .search-box input{
+    width:60%;
+  }
+  .print-tenants div{
+    flex:1 1 45%;
+  }
+}
+
+/* PRINT */
+@media print{
+  body *{visibility:hidden}
+  #previewBox, #previewBox *{visibility:visible}
+  #previewBox{
+    position:absolute;
+    left:0;top:0;
+    width:100%;
+  }
+  .noPrint{display:none}
+}
+</style>
+</head>
+<body>
+<header>Tenent Details </header>
+
+<!-- SEARCH -->
+<div class="search-box">
+  <input id="searchShop" placeholder="Shop No / Tenant / Mobile">
+  <button onclick="load()">Search</button>
+</div>
+
+<!-- LOADING MESSAGE -->
+<h2 id="loadingMessage">Loading… Please wait</h2>
+
+<!-- CARDS -->
+<div class="list" id="list"></div>
+
+<!-- PRINT PREVIEW -->
+<div id="previewBox">
+  <button class="noPrint" onclick="window.print()">Print</button>
+  <button class="noPrint" onclick="previewBox.style.display='none'">Close</button>
+  <div id="printArea"></div>
+</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbwnY99_hETH8F_nYcS1jbW_5PfuGXWHVA9ZIf-xKoJ3BjEcSZ455K38ey7wDh6qlIsSvw/exec";
+
+// LOAD DATA AND DISPLAY CARDS
+async function load(){
+  document.getElementById("loadingMessage").style.display="block"; // Show loading
+
+  const res=await fetch(API,{
+    method:"POST",
+    body:JSON.stringify({action:"get"})
+  }).then(r=>r.json());
+
+  const searchVal=document.getElementById("searchShop").value.trim().toLowerCase();
+  const listDiv=document.getElementById("list");
+  listDiv.innerHTML="";
+  
+  res.forEach(r=>{
+    if(searchVal && !(
+      r[3].toLowerCase().includes(searchVal) ||
+      r[5].toLowerCase().includes(searchVal) ||
+      r[7].toLowerCase().includes(searchVal)
+    )) return;
+
+    const imgs=JSON.parse(r[15]||"[]");
+    const img=imgs[0]||"https://via.placeholder.com/300";
+
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`
+      <div style="display:flex;align-items:center;">
+        <img src="${img}">
+        <h3>Shop ${r[3]} <span class="tenantName">${r[5]}</span></h3>
+      </div>
+      <div class="card-body">
+        <p>${r[4]}</p>
+        <p>Mobile: ${r[7]}</p>
+        <button onclick='printView(${JSON.stringify(r)})'>Print</button>
+      </div>`;
+    listDiv.appendChild(card);
+  });
+
+  document.getElementById("loadingMessage").style.display="none"; // Hide loading
+}
+
+// FORMAT DATE
+function formatDate(d){
+  const x=new Date(d);
+  const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return ("0"+x.getDate()).slice(-2)+"-"+m[x.getMonth()]+"-"+x.getFullYear();
+}
+
+// PRINT PREVIEW
+function printView(r){
+  const imgs=JSON.parse(r[15]||"[]");
+  const tenantImgs=imgs.map(i=>`<div><img src="${i}"><span>${r[5]}</span></div>`).join("");
+
+  printArea.innerHTML=`
+  <div class="print-page">
+    <div class="print-header">
+      <img src="sa.png">
+      <div class="print-header-title">வாடகைதாரர் விவரம்</div>
+      <img src="2.jpg">
+    </div>
+
+    <div class="print-tenants">
+      ${tenantImgs || `<div><img src="https://via.placeholder.com/50"><span>${r[5]}</span></div>`}
+    </div>
+
+    <table class="print-table">
+      <tr><th>Complex Name</th><td>${r[1]}</td></tr>
+      <tr><th>Complex No</th><td>${r[2]}</td></tr>
+      <tr><th>Shop No</th><td>${r[3]}</td></tr>
+      <tr><th>Shop Name</th><td>${r[4]}</td></tr>
+      <tr><th>Tenant Name</th><td>${r[5]}</td></tr>
+      <tr><th>F/H Name</th><td>${r[6]}</td></tr>
+      <tr><th>Mobile</th><td>${r[7]}</td></tr>
+      <tr><th>Alt Mobile</th><td>${r[8]}</td></tr>
+      <tr><th>Address</th><td>${r[9]}</td></tr>
+      <tr><th>ID Proof</th><td>${r[10]} - ${r[11]}</td></tr>
+      <tr><th>Monthly Rent</th><td>Rs.${r[12]}</td></tr>
+      <tr><th>Advance</th><td>Rs. ${r[13]}</td></tr>
+      <tr><th>Start Date</th><td>${formatDate(r[14])}</td></tr>
+    </table>
+  </div>
+  `;
+  previewBox.style.display="block";
+}
+
+// LOAD DATA ON START
+load();
+</script>
+</body>
+</html>

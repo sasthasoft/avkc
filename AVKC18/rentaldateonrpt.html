@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rent Payment Report</title>
+
+<style>
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial;background:#f4f6f8;}
+.container{max-width:1200px;margin:auto;padding:10px;}
+h2,h3{text-align:center;color:#c2185b;margin:6px 0;}
+h5{text-align:center;color:Blue;margin:6px 0;}
+
+  .print-date{text-align:right;font-size:12px;font-weight:bold;margin-bottom:5px;}
+
+.card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:15px;}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;}
+label{font-size:12px;font-weight:bold;}
+select,input{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;}
+button{width:100%;padding:9px;border:none;border-radius:8px;background:#c2185b;color:#fff;font-weight:bold;cursor:pointer;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
+th{background:#f06292;color:#fff;}
+.total-row{font-weight:bold;background:#f2f2f2;}
+
+td:nth-child(8),
+td:nth-child(9),
+td:nth-child(10){
+text-align:right;
+}
+
+@page{size:A4 portrait;margin:8mm;}
+@media print{
+button{display:none;}
+body{background:#fff;}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h5>AVKC சங்கம் - கோவில்பட்டி</h5>
+<h2>Multi Date Wise Rent Report</h2>
+
+<div class="card">
+<div class="row">
+<div>
+<label>Transaction ID</label>
+<select id="filterTransaction">
+<option value="">All</option>
+<option value="கடைகள் வாடகை ரசீது">கடைகள் வாடகை ரசீது</option>
+<option value="ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது</option>
+<option value="அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது">அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது</option>
+<option value="ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது</option>
+</select>
+</div>
+
+<div>
+<label>From Date</label>
+<input type="date" id="fromDate">
+</div>
+
+<div>
+<label>To Date</label>
+<input type="date" id="toDate">
+</div>
+
+<div>
+<button onclick="applyFilter()">🔍 Search</button>
+</div>
+</div>
+</div>
+
+<!-- BILL DETAILS -->
+<div class="card">
+<div class="print-date" id="billPrintDate"></div>
+<h3>Bill Details</h3>
+<div class="table-wrap">
+<table id="detailTable">
+<thead>
+<tr>
+<th>Bill No</th>
+<th>Date</th>
+<th>Transaction ID</th>
+<th>Tenant Name</th>
+<th>Mobile</th>
+<th>Shop No</th>
+<th>Months</th>
+<th>Net Amount</th>
+<th>Now Paid</th>
+<th>Pending</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<!-- TRANSACTION SUMMARY -->
+<div class="card">
+<div class="print-date" id="summaryPrintDate"></div>
+<h3>Transaction Summary</h3>
+<div class="table-wrap">
+<table id="summaryTable">
+<thead>
+<tr>
+<th>Transaction ID</th>
+<th>Date</th>
+<th>Bill Count</th>
+<th>Total Net</th>
+<th>Total Now Paid</th>
+<th>Total Pending</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<button onclick="window.print()">🖨 Print Full Report</button>
+</div>
+
+</div>
+
+<script>
+
+const API_URL="https://script.google.com/macros/s/AKfycbyogWMiTNNixoMp7E0NEA7-z_y0Syxxrp_NrG8hWhI7bpPRNokcNAKYo1EyZxxx6qnldA/exec";
+let allPayments=[];
+
+/* Current Date Time */
+function getCurrentDateTime(){
+const now=new Date();
+return now.toLocaleString();
+}
+
+/* Format Date */
+function formatDate(d){
+if(!d) return "";
+const date=new Date(d);
+if(isNaN(date)) return d;
+const day=String(date.getDate()).padStart(2,'0');
+const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+return `${day}-${months[date.getMonth()]}-${date.getFullYear()}`;
+}
+
+/* Load Data */
+async function loadPayments(){
+const res=await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({action:"getPayments"})
+});
+const data=await res.json();
+allPayments=data.data||[];
+
+document.getElementById("billPrintDate").innerText="Print Date & Time : "+getCurrentDateTime();
+document.getElementById("summaryPrintDate").innerText="Print Date & Time : "+getCurrentDateTime();
+
+renderTables(allPayments);
+}
+
+/* Filter */
+function applyFilter(){
+const tId=document.getElementById("filterTransaction").value;
+const fromDate=document.getElementById("fromDate").value;
+const toDate=document.getElementById("toDate").value;
+
+let filtered=[...allPayments];
+
+if(tId){
+filtered=filtered.filter(p=>p.Transaction_Id===tId);
+}
+if(fromDate){
+filtered=filtered.filter(p=>new Date(p.PaymentDate)>=new Date(fromDate));
+}
+if(toDate){
+filtered=filtered.filter(p=>new Date(p.PaymentDate)<=new Date(toDate));
+}
+
+renderTables(filtered);
+}
+
+/* Render Tables */
+function renderTables(data){
+renderDetailTable(data);
+renderSummaryTable(data);
+}
+
+/* Bill Details */
+function renderDetailTable(data){
+const body=document.querySelector("#detailTable tbody");
+body.innerHTML="";
+
+let totalNet=0,totalNow=0,totalPending=0;
+
+data.forEach(r=>{
+totalNet+=parseFloat(r.Net_Amount)||0;
+totalNow+=parseFloat(r.Now_Paid)||0;
+totalPending+=parseFloat(r.Pending)||0;
+
+body.innerHTML+=`
+<tr>
+<td>${r.Bill_No||""}</td>
+<td>${formatDate(r.PaymentDate)}</td>
+<td>${r.Transaction_Id||""}</td>
+<td>${r["Tenant Name"]||""}</td>
+<td>${r.Mobile||""}</td>
+<td>${r.Shop_No||""}</td>
+<td>${r.Months||""}</td>
+<td>${parseFloat(r.Net_Amount||0).toFixed(2)}</td>
+<td>${parseFloat(r.Now_Paid||0).toFixed(2)}</td>
+<td>${parseFloat(r.Pending||0).toFixed(2)}</td>
+</tr>`;
+});
+
+body.innerHTML+=`
+<tr class="total-row">
+<td colspan="7" style="text-align:right;">TOTAL :</td>
+<td>${totalNet.toFixed(2)}</td>
+<td>${totalNow.toFixed(2)}</td>
+<td>${totalPending.toFixed(2)}</td>
+</tr>`;
+}
+
+/* Transaction Summary with Date Column */
+function renderSummaryTable(data){
+const body=document.querySelector("#summaryTable tbody");
+body.innerHTML="";
+
+let grouped={};
+let grandNet=0,grandNow=0,grandPending=0,grandCount=0;
+
+data.forEach(r=>{
+const t=r.Transaction_Id||"Unknown";
+if(!grouped[t]){
+grouped[t]={count:0,net:0,now:0,pending:0,date:formatDate(r.PaymentDate)};
+}
+grouped[t].count++;
+grouped[t].net+=parseFloat(r.Net_Amount)||0;
+grouped[t].now+=parseFloat(r.Now_Paid)||0;
+grouped[t].pending+=parseFloat(r.Pending)||0;
+});
+
+for(let key in grouped){
+grandCount+=grouped[key].count;
+grandNet+=grouped[key].net;
+grandNow+=grouped[key].now;
+grandPending+=grouped[key].pending;
+
+body.innerHTML+=`
+<tr>
+<td>${key}</td>
+<td>${grouped[key].date}</td>
+<td>${grouped[key].count}</td>
+<td>${grouped[key].net.toFixed(2)}</td>
+<td>${grouped[key].now.toFixed(2)}</td>
+<td>${grouped[key].pending.toFixed(2)}</td>
+</tr>`;
+}
+
+body.innerHTML+=`
+<tr class="total-row">
+<td colspan="2">GRAND TOTAL</td>
+<td>${grandCount}</td>
+<td>${grandNet.toFixed(2)}</td>
+<td>${grandNow.toFixed(2)}</td>
+<td>${grandPending.toFixed(2)}</td>
+</tr>`;
+}
+
+loadPayments();
+
+</script>
+</body>
+</html>

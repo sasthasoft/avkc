@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Land Property Report</title>
+
+<style>
+body{font-family:Arial;margin:0;background:#fff}
+.header{background:#c2185b;color:#fff;text-align:center;padding:15px}
+.container{max-width:1300px;margin:auto;padding:15px}
+
+h2.loading::after{
+ content:" ! ";
+ animation:blink 1s infinite;
+}
+@keyframes blink{
+ 50%{opacity:0.3}
+}
+
+input,button{
+ width:100%;
+ padding:10px;
+ margin:6px 0;
+ box-sizing:border-box;
+ font-size:14px;
+}
+
+button{
+ background:#c2185b;
+ color:#fff;
+ border:0;
+ font-weight:bold;
+ border-radius:4px;
+ cursor:pointer;
+}
+
+.actions{
+ display:flex;
+ gap:10px;
+ flex-wrap:wrap;
+}
+
+.search{
+ border:2px solid #c2185b;
+}
+
+.table-wrap{
+ width:100%;
+ overflow-x:auto;
+ margin-top:15px;
+ border:1px solid #ccc;
+}
+
+table{
+ width:100%;
+ border-collapse:collapse;
+ table-layout:auto;
+}
+
+th,td{
+ border:1px solid #ccc;
+ padding:8px;
+ text-align:center;
+ font-size:13px;
+}
+
+thead th{
+ background:#f4b6c2;
+ position:sticky;
+ top:0;
+ z-index:1;
+}
+
+/* ===== PRINT HEADER ===== */
+.print-header{
+ display:none;
+}
+
+/* ===== PRINT STYLE ===== */
+@media print{
+ body{margin:0}
+ .header,.actions{display:none}
+ .print-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+ }
+ .print-header img{height:60px}
+ table{font-size:12px}
+ th,td{padding:6px}
+}
+
+/* ===== MOBILE ===== */
+@media(max-width:600px){
+ th,td{font-size:12px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2 id="title" class="loading">Loading Report</h2>
+</div>
+
+<div class="container">
+
+<div class="actions">
+ <input id="search" class="search" placeholder="Search anything..." onkeyup="filterTable()">
+ <button onclick="printPreview()"> Print Preview</button>
+ <button onclick="window.print()">Print</button>
+</div>
+
+<!-- PRINT HEADER -->
+<div class="print-header">
+ <img src="1.png">
+ <h3>AVKC Sangam Kovilpatti | Property Details</h3>
+ <img src="2.jpg">
+</div>
+
+<div class="table-wrap">
+<table id="reportTable">
+<thead>
+<tr>
+<th>ID</th>
+<th>Date</th>
+<th>Owner</th>
+<th>Type</th>
+<th>Survey</th>
+<th>Area</th>
+<th>Value</th>
+<th>Mode</th>
+<th>Ref</th>
+<th>Remarks</th>
+</tr>
+</thead>
+<tbody id="data"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+const GS_URL="https://script.google.com/macros/s/AKfycbyUruxTh0RLk0W84ORqOdB_3CPn1h7-EQUmDm9Ds1cTZmmkipgWv8y5kChFsbDY45CG/exec";
+let allRows=[];
+
+/* ===== DATE FORMAT ===== */
+function toDDMMMYYYY(v){
+ if(!v) return "";
+ const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+ const d=new Date(v);
+ if(isNaN(d)) return v;
+ return String(d.getDate()).padStart(2,'0')+"-"+m[d.getMonth()]+"-"+d.getFullYear();
+}
+
+/* ===== LOAD DATA ===== */
+function load(){
+ fetch(GS_URL,{
+  method:"POST",
+  body:JSON.stringify({action:"view"})
+ }).then(r=>r.json()).then(rows=>{
+   allRows=rows;
+   render(rows);
+
+   // Update title after load
+   const t=document.getElementById("title");
+   t.classList.remove("loading");
+   t.innerText="Land / Property Report";
+ });
+}
+
+/* ===== RENDER ===== */
+function render(rows){
+ let h="";
+ rows.forEach(r=>{
+  h+=`<tr>
+   <td>${r[0]}</td>
+   <td>${toDDMMMYYYY(r[1])}</td>
+   <td>${r[2]}</td>
+   <td>${r[3]}</td>
+   <td>${r[4]}</td>
+   <td>${r[5]}</td>
+   <td>${r[7]}</td>
+   <td>${r[8]}</td>
+   <td>${r[9]}</td>
+   <td>${r[10]}</td>
+  </tr>`;
+ });
+ data.innerHTML=h;
+}
+
+/* ===== FAST SEARCH ===== */
+function filterTable(){
+ const q=search.value.toLowerCase();
+ render(allRows.filter(r=>r.join(" ").toLowerCase().includes(q)));
+}
+
+/* ===== PRINT PREVIEW ===== */
+function printPreview(){
+ window.print(); // browser opens preview automatically
+}
+
+window.onload=load;
+</script>
+
+</body>
+</html>

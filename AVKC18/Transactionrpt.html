@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rent Payment Report</title>
+
+<style>
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;}
+.container{max-width:1200px;margin:auto;padding:10px;}
+h2,h3{text-align:center;color:#c2185b;margin:5px 0;}
+.card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:15px;}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;}
+label{font-size:12px;font-weight:bold;}
+select{width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;}
+button{width:100%;padding:10px;border:none;border-radius:8px;background:#c2185b;color:#fff;font-weight:bold;cursor:pointer;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:900px;font-size:12px;margin-top:10px;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
+th{background:#f06292;color:#fff;}
+#loading{text-align:center;color:#c2185b;font-weight:bold;margin:10px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h2>Transaction Id Report</h2>
+
+<div class="card">
+<div class="row">
+<div>
+<label>Transaction ID</label>
+<select id="filterTransaction">
+<option value="">All Transactions</option>
+<option value="கடைகள் வாடகை ரசீது">கடைகள் வாடகை ரசீது</option>
+<option value="ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது</option>
+<option value="அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது">அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது</option>
+<option value="ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது</option>
+</select>
+<button onclick="searchByTransaction()">🔍 Search</button>
+</div>
+</div>
+</div>
+
+<div id="loading">Loading data...</div>
+
+<div class="card" id="filteredResultsCard" style="display:none;">
+<h3>Search Results</h3>
+<div class="table-wrap">
+<table id="filteredTable">
+<thead></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<div class="card" id="allTableCard">
+<h3>All Payments</h3>
+<div class="table-wrap">
+<table id="dataTable">
+<thead></thead>
+<tbody></tbody>
+</table>
+</div>
+<br>
+<button type="button" onclick="printReport()">🖨 Print Report</button>
+</div>
+
+</div>
+
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbyogWMiTNNixoMp7E0NEA7-z_y0Syxxrp_NrG8hWhI7bpPRNokcNAKYo1EyZxxx6qnldA/exec";
+let allPayments=[];
+
+/* Load Data */
+async function loadPayments(){
+document.getElementById("loading").style.display="block";
+try{
+const res=await fetch(API_URL,{method:"POST",body:JSON.stringify({action:"getPayments"})});
+const data=await res.json();
+allPayments=data.data||[];
+document.getElementById("loading").style.display="none";
+renderTable(allPayments,"dataTable");
+}catch(e){
+document.getElementById("loading").innerText="Failed to load!";
+}
+}
+
+/* Render Table */
+function renderTable(payments,tableId){
+const table=document.getElementById(tableId);
+const h=table.querySelector("thead");
+const b=table.querySelector("tbody");
+h.innerHTML=b.innerHTML="";
+if(!payments.length){
+b.innerHTML="<tr><td colspan='10'>No Data</td></tr>";
+return;
+}
+
+const keys=Object.keys(payments[0]);
+h.innerHTML="<tr>"+keys.map(k=>`<th>${k}</th>`).join("")+"</tr>";
+
+b.innerHTML=payments.map(r=>"<tr>"+
+keys.map(k=>`<td>${r[k]||""}</td>`).join("")+
+"</tr>").join("");
+}
+
+/* Filter */
+function searchByTransaction(){
+const tId=document.getElementById("filterTransaction").value.trim();
+if(!tId){
+document.getElementById("filteredResultsCard").style.display="none";
+document.getElementById("allTableCard").style.display="block";
+return;
+}
+const filtered=allPayments.filter(p=>p.Transaction_ID===tId);
+if(!filtered.length){
+alert("No records found!");
+return;
+}
+document.getElementById("filteredResultsCard").style.display="block";
+document.getElementById("allTableCard").style.display="none";
+renderTable(filtered,"filteredTable");
+}
+
+/* Print */
+function printReport(){
+
+const filteredVisible = document.getElementById("filteredResultsCard").style.display==="block";
+const sourceTable = filteredVisible ?
+      document.getElementById("filteredTable") :
+      document.getElementById("dataTable");
+
+if(!sourceTable || !sourceTable.querySelector("tbody").innerHTML.trim()){
+alert("No data to print!");
+return;
+}
+
+/* Columns to print */
+const allowedColumns=[
+"Bill_No",
+"PaymentDate",
+"Transaction_Id",
+"Tenant Name",
+"Mobile",
+"Shop_No",
+"Months",
+"Net_Amount",
+"Now_Paid",
+"Pending"
+];
+
+let newTable="<table><thead><tr>";
+allowedColumns.forEach(col=>{ newTable+=`<th>${col}</th>`; });
+newTable+="</tr></thead><tbody>";
+
+const headers=sourceTable.querySelectorAll("thead th");
+const rows=sourceTable.querySelectorAll("tbody tr");
+
+let totalNowPaid = 0;
+let totalPending = 0;
+
+rows.forEach(row=>{
+const cells=row.querySelectorAll("td");
+newTable+="<tr>";
+
+allowedColumns.forEach(col=>{
+let value="";
+headers.forEach((th,i)=>{
+if(th.innerText.trim()===col){
+value=cells[i]?cells[i].innerText:"";
+}
+});
+
+/* Calculate totals */
+if(col==="Now_Paid"){
+totalNowPaid += parseFloat(value)||0;
+}
+if(col==="Pending"){
+totalPending += parseFloat(value)||0;
+}
+
+newTable+=`<td>${value}</td>`;
+});
+
+newTable+="</tr>";
+});
+
+/* ===== SUMMARY ROW ===== */
+newTable+=`
+<tr style="font-weight:bold;background:#f2f2f2;">
+<td colspan="8" style="text-align:right;">TOTAL</td>
+<td>${totalNowPaid.toFixed(2)}</td>
+<td>${totalPending.toFixed(2)}</td>
+</tr>
+`;
+
+newTable+="</tbody></table>";
+
+const now=new Date();
+const dtStr=now.toLocaleDateString();
+
+/* OPEN PREVIEW WINDOW */
+const previewWindow=window.open("","_blank");
+
+previewWindow.document.write(`
+<html>
+<head>
+<title>Print Preview</title>
+<style>
+
+body{
+font-family:Arial;
+margin:20px;
+}
+
+.preview-container{
+width:210mm;
+margin:auto;
+padding:10mm;
+background:white;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+
+h2,h3{
+text-align:center;
+margin:5px 0;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+table-layout:fixed;
+}
+
+th,td{
+border:1px solid #000;
+padding:4px;
+font-size:10px;
+text-align:center;
+word-break:break-word;
+}
+
+th{
+background:#f06292;
+color:#fff;
+}
+
+.print-btn{
+margin:20px auto;
+display:block;
+padding:10px 20px;
+background:#c2185b;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+@media print{
+body{margin:0;}
+.print-btn{display:none;}
+.preview-container{
+box-shadow:none;
+width:210mm;
+padding:8mm;
+}
+@page{
+size:A4 portrait;
+margin:8mm;
+}
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="preview-container">
+<h2>AVKC சங்கம் - கோவில்பட்டி</h2>
+<h3>Transaction Report</h3>
+<h3>Date: ${dtStr}</h3>
+
+${newTable}
+
+</div>
+
+<button class="print-btn" onclick="window.print()">🖨 Print Now</button>
+
+</body>
+</html>
+`);
+
+previewWindow.document.close();
+}
+loadPayments();
+</script>
+</body>
+</html>

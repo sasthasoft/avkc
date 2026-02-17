@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login System</title>
+
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  font-family:Arial, sans-serif;
+}
+
+body{
+  background:linear-gradient(135deg,#8b004f,#c2185b,#ff4081);
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.container{
+  width:95%;
+  max-width:400px;
+  background:#ffffff;
+  padding:25px;
+  border-radius:15px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+
+h2{
+  text-align:center;
+  margin-bottom:20px;
+  color:#c2185b;
+}
+
+select, input{
+  width:100%;
+  padding:12px;
+  margin:10px 0;
+  border:1px solid #ccc;
+  border-radius:8px;
+  font-size:15px;
+}
+
+select:focus, input:focus{
+  outline:none;
+  border:1px solid #c2185b;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:#c2185b;
+  color:#fff;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+button:hover{
+  background:#8b004f;
+}
+
+.msg{
+  text-align:center;
+  font-size:14px;
+  margin-top:8px;
+  color:red;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h2>Login</h2>
+
+<select id="role">
+  <option value="">Select User</option>
+  <option value="admin">Admin</option>
+  <option value="user1">User</option>
+ 
+</select>
+
+<!-- Password visible as TEXT -->
+<input type="text" id="password" placeholder="Enter Password">
+
+<button onclick="login()">Login</button>
+
+<div id="msg" class="msg"></div>
+
+</div>
+
+<script>
+
+// Fixed Passwords
+const credentials = {
+  admin: "2026",
+  user: "2026"
+};
+
+function login(){
+
+  let role = document.getElementById("role").value;
+  let pass = document.getElementById("password").value.trim();
+
+  if(role==="" || pass===""){
+    msg.innerHTML="Select User and Enter Password";
+    return;
+  }
+
+  if(credentials[role] === pass){
+    sessionStorage.setItem("role", role);
+
+    if(role === "admin"){
+      window.location="main.html";
+    }else{
+      window.location="user.html";
+    }
+
+  }else{
+    msg.innerHTML="Invalid Password";
+  }
+}
+
+</script>
+
+</body>
+</html>

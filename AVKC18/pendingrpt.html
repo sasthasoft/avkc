@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Payment Report</title>
+
+<style>
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;}
+.container{max-width:1200px;margin:auto;padding:10px;}
+h2,h3{text-align:center;color:#c2185b;margin:5px 0;}
+h4{text-align:center;color:green;margin:5px 0;}
+
+  .card{background:#fff;padding:15px;border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:15px;}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:12px;align-items:end;}
+label{font-size:12px;font-weight:bold;}
+select,input{width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;}
+button{width:100%;padding:10px;border:none;border-radius:8px;
+background:#c2185b;color:#fff;font-weight:bold;cursor:pointer;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:900px;
+font-size:12px;margin-top:10px;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
+th{background:#f06292;color:#fff;}
+.summary-box{
+display:flex;
+flex-wrap:wrap;
+gap:20px;
+justify-content:center;
+margin-top:15px;
+}
+.summary-card{
+background:#9c27b0;
+color:white;
+padding:15px 25px;
+border-radius:10px;
+font-weight:bold;
+text-align:center;
+min-width:200px;
+}
+
+/* ================= PRINT SETTINGS ================= */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+
+  body {
+    background: #fff !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  button,
+  select,
+  input,
+  label,
+  .row {
+    display: none !important;   /* Hide filters in print */
+  }
+
+  h2, h3 {
+    color: black !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  table {
+    min-width: 100% !important;
+    font-size: 11px;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  th {
+    background: #eee !important;
+    color: #000 !important;
+  }
+
+  .summary-card {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #000;
+  }
+
+  .summary-box {
+    margin-top: 10px;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h4>AVKC சங்கம் - கோவில்பட்டி </h4>
+
+<h2>Pending Payment Report</h2>
+
+<div class="card">
+<div class="row">
+
+<div>
+<label>Transaction ID</label>
+<select id="filterTransaction">
+<option value="">All Transactions</option>
+<option value="கடைகள் வாடகை ரசீது">கடைகள் வாடகை ரசீது</option>
+<option value="ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. துவக்கப்பள்ளி கடை வாடகை ரசீது</option>
+<option value="அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது">அன்னதானசத்திரம், மண்டபம், கடை வாடகை ரசீது</option>
+<option value="ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது">ஆ.வை. மேல்நிலைப்பள்ளி கடை வாடகை ரசீது</option>
+</select>
+</div>
+
+<div>
+<label>From Date</label>
+<input type="date" id="fromDate">
+</div>
+
+<div>
+<label>To Date</label>
+<input type="date" id="toDate">
+</div>
+
+<div>
+<label>Month</label>
+<input type="month" id="filterMonth">
+</div>
+
+<div>
+<button onclick="advancedSearch()">🔍 Search</button>
+</div>
+
+<div>
+<button onclick="window.print()">🖨 Print A4</button>
+</div>
+
+</div>
+</div>
+
+<div class="card" id="resultsCard">
+<h3>Rental Pending Reports</h3>
+<div class="table-wrap">
+<table id="dataTable">
+<thead></thead>
+<tbody></tbody>
+</table>
+</div>
+
+<!-- Separate Summary -->
+<div id="summarySection"></div>
+
+</div>
+
+</div>
+
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbyogWMiTNNixoMp7E0NEA7-z_y0Syxxrp_NrG8hWhI7bpPRNokcNAKYo1EyZxxx6qnldA/exec";
+let allPayments=[];
+
+/* Columns to Display */
+const allowedColumns=[
+"Bill_No",
+"PaymentDate",
+"Transaction_Id",
+"Tenant Name",
+"Mobile",
+"Shop_No",
+"Months",
+"Net_Amount",
+"Now_Paid",
+"Pending"
+];
+
+/* Load Data */
+async function loadPayments(){
+const res=await fetch(API_URL,{method:"POST",
+body:JSON.stringify({action:"getPayments"})});
+const data=await res.json();
+allPayments=data.data||[];
+advancedSearch();
+}
+
+/* Format Date */
+function formatDate(dateString){
+if(!dateString) return "";
+let d=new Date(dateString);
+return d.toLocaleDateString("en-GB",
+{day:"2-digit",month:"short",year:"numeric"});
+}
+
+/* Render Table */
+function renderTable(data){
+
+const table=document.getElementById("dataTable");
+const h=table.querySelector("thead");
+const b=table.querySelector("tbody");
+h.innerHTML=b.innerHTML="";
+
+if(!data.length){
+b.innerHTML="<tr><td colspan='10'>No Data</td></tr>";
+return;
+}
+
+/* Header */
+h.innerHTML="<tr>"+
+allowedColumns.map(k=>`<th>${k}</th>`).join("")+
+"</tr>";
+
+/* Body */
+b.innerHTML=data.map(r=>{
+return "<tr>"+
+allowedColumns.map(k=>{
+if(k.toLowerCase().includes("date")){
+return `<td>${formatDate(r[k])}</td>`;
+}
+return `<td>${r[k]||""}</td>`;
+}).join("")+
+"</tr>";
+}).join("");
+
+}
+
+/* Summary Section */
+function renderSummary(data){
+
+let totalQty=data.length;
+let totalNowPaid=0;
+let totalPending=0;
+
+data.forEach(r=>{
+totalNowPaid+=parseFloat(r.Now_Paid)||0;
+totalPending+=parseFloat(r.Pending)||0;
+});
+
+document.getElementById("summarySection").innerHTML=`
+<div class="summary-box">
+<div class="summary-card">
+Total Records<br>${totalQty}
+</div>
+<div class="summary-card">
+Total Now Paid<br>${totalNowPaid.toFixed(2)}
+</div>
+<div class="summary-card">
+Total Pending<br>${totalPending.toFixed(2)}
+</div>
+</div>
+`;
+}
+
+/* Search */
+function advancedSearch(){
+
+const tId=document.getElementById("filterTransaction").value.trim();
+const fromDate=document.getElementById("fromDate").value;
+const toDate=document.getElementById("toDate").value;
+const month=document.getElementById("filterMonth").value;
+
+let filtered=allPayments.filter(p=>{
+
+let pending=parseFloat(p.Pending)||0;
+if(pending<=0) return false;
+
+let matchTransaction=!tId||p.Transaction_Id===tId;
+
+let paymentDate=new Date(p.PaymentDate);
+
+let matchDateRange=true;
+if(fromDate) matchDateRange=paymentDate>=new Date(fromDate);
+if(toDate) matchDateRange=matchDateRange &&
+paymentDate<=new Date(toDate);
+
+let matchMonth=true;
+if(month){
+let selectedMonth=new Date(month);
+matchMonth=paymentDate.getMonth()===selectedMonth.getMonth() &&
+paymentDate.getFullYear()===selectedMonth.getFullYear();
+}
+
+return matchTransaction&&matchDateRange&&matchMonth;
+});
+
+renderTable(filtered);
+renderSummary(filtered);
+
+}
+
+loadPayments();
+</script>
+</body>
+</html>

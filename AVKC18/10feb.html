@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tenant Search</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background:#f4f6f8;
+  margin:0;
+  padding:15px;
+}
+
+.container{
+  max-width:500px;
+  margin:auto;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  border:none;
+  background:#c2185b;
+  color:white;
+  border-radius:6px;
+  font-size:16px;
+}
+
+#tenantResult{
+  margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h2 style="text-align:center;">Search Tenant</h2>
+
+  <input type="text" id="searchKey" placeholder="Enter Name / Shop / Mobile">
+
+  <button onclick="searchTenant()">Search</button>
+
+  <div id="tenantResult"></div>
+
+</div>
+
+<script>
+
+// 🔴 Your Google Apps Script URL
+const API_URL = "YOUR_API_URL_HERE";
+
+let currentTenant = {};
+let rental = { value: 0 };   // If rental input exists in your main system
+
+function calculate(){}       // If calculate function exists in your system
+
+function searchTenant(){
+
+  const keyword = document.getElementById("searchKey").value.trim();
+  const tenantBox = document.getElementById("tenantResult");
+
+  if(keyword === ""){
+    tenantBox.innerHTML = "❌ Please enter Name / Shop / Mobile";
+    return;
+  }
+
+  tenantBox.innerHTML = "⏳ Searching...";
+
+  fetch(API_URL,{
+    method:"POST",
+    body: JSON.stringify({
+      action:"searchTenant",
+      keyword: keyword
+    })
+  })
+  .then(response => response.json())
+  .then(res => {
+
+    if(!res.tenants || res.tenants.length === 0){
+      tenantBox.innerHTML = "❌ No tenant found";
+      currentTenant = {};
+      return;
+    }
+
+    currentTenant = res.tenants[0];
+
+    /* ===========================
+       FORCE IMAGE WORK
+    ============================ */
+
+    let previewImage = "https://via.placeholder.com/90";
+
+    let imgData = currentTenant.Image_Based64 
+                  || currentTenant.image 
+                  || currentTenant.photo 
+                  || "";
+
+    if(imgData && imgData !== ""){
+
+      imgData = imgData.toString().trim();
+      imgData = imgData.replace(/^"+|"+$/g, "");
+      imgData = imgData.replace(/\s+/g, "");
+
+      if(imgData.startsWith("data:image")){
+        previewImage = imgData;
+      }else{
+        previewImage = "data:image/jpeg;base64," + imgData;
+      }
+    }
+
+    /* =========================== */
+
+    tenantBox.innerHTML = `
+      <div style="
+        display:flex;
+        align-items:center;
+        gap:15px;
+        background:#fce4ec;
+        padding:12px;
+        border-radius:10px;
+        box-shadow:0 3px 8px rgba(0,0,0,0.1);
+      ">
+        
+        <img src="${previewImage}"
+             style="width:90px;height:90px;object-fit:cover;border-radius:10px;border:1px solid #ccc;"
+             onerror="this.src='https://via.placeholder.com/90';">
+
+        <div>
+          <h4 style="margin:0;color:#013220;">
+            ${currentTenant.tenantName || "-"}
+          </h4>
+          <div><b>Shop:</b> ${currentTenant.shopNo || "-"}</div>
+          <div><b>Mobile:</b> ${currentTenant.mobile || "-"}</div>
+          <div><b>Rent:</b> ₹ ${currentTenant.rental || 0}</div>
+        </div>
+
+      </div>
+    `;
+
+  })
+  .catch(error => {
+    console.log(error);
+    tenantBox.innerHTML = "❌ Error loading tenant";
+  });
+
+}
+
+</script>
+
+</body>
+</html>
