@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Rental Management</title>
+
+<style>
+body{font-family:Arial;margin:0;background:#fff}
+header{background:#c2185b;color:#fff;padding:15px;text-align:center;font-size:22px}
+
+.card{border:2px solid #f48fb1;border-radius:10px;padding:15px;margin:10px}
+
+input,textarea,select{
+  width:93%;padding:8px;margin:6px 0;
+  border:1px solid #f48fb1;border-radius:5px
+}
+
+button{
+  background:#c2185b;color:#fff;border:none;
+  padding:8px 12px;border-radius:6px;margin:2px
+}
+
+img{
+  object-fit:cover;
+  margin:2px;
+  border-radius:4px;
+  border:1px solid #f48fb1;
+}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th,td{border:1px solid #f48fb1;padding:6px;vertical-align:top}
+th{background:#f8bbd0}
+
+/* Loading overlay */
+#loading{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  color:#fff;
+  font-size:20px;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+
+/* Preview modal */
+#previewBox{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:#fff;
+  overflow:auto;
+  z-index:9998;
+  padding:10px;
+}
+
+/* Print media */
+@media print{
+  body *{visibility:hidden}
+  #previewBox, #previewBox *{visibility:visible}
+  #previewBox{
+    position:absolute;left:0;top:0;width:100%;
+  }
+  .noPrint{display:none}
+}
+
+/* Image layout in print */
+.print-images{
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+.print-images .main-img{
+  width:65%;
+  aspect-ratio:1/1;
+  object-fit:cover;
+  margin-bottom:10px;
+  border:2px solid #f48fb1;
+}
+.print-images .side-imgs{
+  width:30%;
+  display:flex;
+  flex-direction:column;
+}
+.print-images .side-imgs img{
+  width:100%;
+  aspect-ratio:1/1;
+  object-fit:cover;
+  margin-bottom:5px;
+  border:2px solid #f48fb1;
+}
+</style>
+</head>
+
+<body>
+<header>New Entry</header>
+
+<div id="loading"> Preparing Preview… Please wait</div>
+
+<!-- ENTRY FORM -->
+<div class="card">
+<input id="ComplexName" placeholder="Complex Name">
+<input id="ComplexNo" placeholder="Complex No">
+<input id="ShopNo" placeholder="Shop No">
+<input id="ShopName" placeholder="Shop Name">
+<input id="TenantName" placeholder="Tenant Name">
+<input id="FHName" placeholder="Father / Husband Name">
+<input id="Mobile" placeholder="Mobile">
+<input id="AltMobile" placeholder="Alternate Mobile">
+<textarea id="Address" placeholder="Address"></textarea>
+
+<select id="IDType">
+<option>Aadhaar</option>
+<option>Voter ID</option>
+<option>PAN</option>
+<option>Driving License</option>
+</select>
+
+<input id="IDNumber" placeholder="ID Number">
+<input id="Rent" placeholder="Monthly Rent">
+<input id="Advance" placeholder="Advance Amount">
+<input type="date" id="StartDate">
+
+<input type="file" multiple accept="image/*" onchange="previewImages(event)">
+<div id="preview"></div>
+
+<button onclick="save()">Save</button>
+</div>
+
+<!-- FILTER + TABLE -->
+<div class="card">
+<input id="filterShop" placeholder="Enter Shop No">
+<button onclick="load()">Search</button>
+
+<table>
+<thead>
+<tr>
+<th>Shop</th>
+<th>Tenant</th>
+<th>Images</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="data"></tbody>
+</table>
+</div>
+
+<!-- PREVIEW + PRINT -->
+<div id="previewBox">
+  <button class="noPrint" onclick="doPrint()"> Print Now</button>
+  <button class="noPrint" onclick="closePreview()"> Close</button>
+  <div id="printArea"></div>
+</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbwnY99_hETH8F_nYcS1jbW_5PfuGXWHVA9ZIf-xKoJ3BjEcSZ455K38ey7wDh6qlIsSvw/exec";
+let ImagesBase64=[];
+
+function previewImages(e){
+  ImagesBase64=[];
+  preview.innerHTML="";
+  [...e.target.files].forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      ImagesBase64.push(r.result);
+      preview.innerHTML+=`<img src="${r.result}" style="width:60px;height:60px">`;
+    }
+    r.readAsDataURL(f);
+  });
+}
+
+function save(){
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({
+      action:"save",
+      ComplexName:ComplexName.value,
+      ComplexNo:ComplexNo.value,
+      ShopNo:ShopNo.value,
+      ShopName:ShopName.value,
+      TenantName:TenantName.value,
+      FHName:FHName.value,
+      Mobile:Mobile.value,
+      AltMobile:AltMobile.value,
+      Address:Address.value,
+      IDType:IDType.value,
+      IDNumber:IDNumber.value,
+      Rent:Rent.value,
+      Advance:Advance.value,
+      StartDate:StartDate.value,
+      ImagesBase64:ImagesBase64
+    })
+  }).then(()=>{alert("Saved");load();});
+}
+
+function load(){
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({action:"get"})
+  }).then(r=>r.json()).then(res=>{
+    data.innerHTML="";
+    const f=filterShop.value.trim();
+    res.forEach(r=>{
+      if(f && r[3]!=f) return;
+      const imgs=JSON.parse(r[15]||"[]")
+        .map(i=>`<img src="${i}" style="width:50px;height:50px">`).join("");
+      data.innerHTML+=`
+      <tr>
+        <td>${r[3]}<br>${r[4]}</td>
+        <td>${r[5]}</td>
+        <td>${imgs}</td>
+        <td>
+          <button onclick='previewPrint(${JSON.stringify(r)})'>Print</button>
+          <button onclick='del(${r[0]})'>Delete</button>
+        </td>
+      </tr>`;
+    })
+  });
+}
+
+function formatDate(input){
+  const d=new Date(input);
+  const month=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return ("0"+d.getDate()).slice(-2)+"-"+month[d.getMonth()]+"-"+d.getFullYear();
+}
+
+function previewPrint(r){
+  loading.style.display="flex";
+
+  const allImages=JSON.parse(r[15]||"[]");
+  let mainImg="", sideImgs="";
+  if(allImages.length>0){
+    mainImg=`<img src="${allImages[0]}" class="main-img">`;
+    if(allImages.length>1){
+      sideImgs=allImages.slice(1).map(i=>`<img src="${i}">`).join("");
+      sideImgs=`<div class="side-imgs">${sideImgs}</div>`;
+    }
+  }
+
+  printArea.innerHTML=`
+  <h3 style="text-align:center">SHOP RENTAL DETAILS</h3>
+  
+  <div class="print-images">
+    ${mainImg}
+    ${sideImgs}
+  </div>
+
+  <table>
+    <tr><th>Complex Name</th><td>${r[1]}</td></tr>
+    <tr><th>Complex No</th><td>${r[2]}</td></tr>
+    <tr><th>Shop No</th><td>${r[3]}</td></tr>
+    <tr><th>Shop Name</th><td>${r[4]}</td></tr>
+    <tr><th>Tenant Name</th><td>${r[5]}</td></tr>
+    <tr><th>F/H Name</th><td>${r[6]}</td></tr>
+    <tr><th>Mobile</th><td>${r[7]}</td></tr>
+    <tr><th>Alt Mobile</th><td>${r[8]}</td></tr>
+    <tr><th>Address</th><td>${r[9]}</td></tr>
+    <tr><th>ID Type</th><td>${r[10]}</td></tr>
+    <tr><th>ID Number</th><td>${r[11]}</td></tr>
+    <tr><th>Monthly Rent</th><td>Rs. ${r[12]}</td></tr>
+    <tr><th>Advance</th><td>Rs. ${r[13]}</td></tr>
+    <tr><th>Start Date</th><td>${formatDate(r[14])}</td></tr>
+  </table>
+  `;
+
+  setTimeout(()=>{
+    loading.style.display="none";
+    previewBox.style.display="block";
+  },500);
+}
+
+function doPrint(){
+  window.print();
+}
+
+function closePreview(){
+  previewBox.style.display="none";
+}
+
+function del(id){
+  if(confirm("Delete this record?")){
+    fetch(API,{
+      method:"POST",
+      body:JSON.stringify({action:"delete",id:id})
+    }).then(()=>load());
+  }
+}
+
+load();
+</script>
+</body>
+</html>

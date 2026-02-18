@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense View Report</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #fff;
+}
+
+.header {
+  background: #c2185b;
+  color: #fff;
+  text-align: center;
+  padding: 15px;
+}
+
+.header h2 {
+  margin: 0;
+}
+
+.loading-msg {
+  font-size: 14px;
+  color: #fff;
+  margin-top: 5px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 15px;
+}
+
+input, select, button {
+  padding: 10px;
+  margin: 6px 0;
+  box-sizing: border-box;
+}
+
+input, select {
+  width: 48%;
+  display: inline-block;
+}
+
+button {
+  background: #c2185b;
+  color: #fff;
+  border: 0;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 2%;
+}
+
+.filter-container {
+  margin: 10px 0;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  min-width: 900px;
+  table-layout: auto;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+  word-wrap: break-word;
+}
+
+th {
+  background: #880e4f; /* dark pink header */
+  color: #fff; /* white text for headings */
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  display: none;
+  z-index: 1000;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+  input, select {
+    width: 100%;
+    margin: 4px 0;
+  }
+  button {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body { margin:0; padding:0; }
+  .no-print, .filter-container, .toast, .loading-msg { display:none; }
+  .table-wrapper { overflow-x: visible; }
+  table { width:100%; border:1px solid #000; table-layout: auto; }
+  th, td { border:1px solid #000; padding:5px; }
+  th { background:#880e4f; color:#fff; } /* heading color dark pink */
+  .print-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:5px;
+    background:#880e4f;
+    color:#fff;
+    padding:5px 10px;
+  }
+  .print-header img { height:60px; }
+  .print-header h2 { margin:0; font-size:20px; text-align:right; color:#fff; }
+  .print-date {
+    text-align:right;
+    font-size:12px;
+    margin-bottom:5px;
+  }
+  tfoot td { font-weight:bold; background:#f8bbd0; }
+}
+</style>
+</head>
+
+<body>
+<div class="header">
+  <h2>Expense Report</h2>
+  <div id="loadingMsg" class="loading-msg">Loading... Please wait</div>
+</div>
+
+<div class="container no-print">
+  <div class="filter-container">
+    <input type="date" id="fromDate" placeholder="From Date">
+    <input type="date" id="toDate" placeholder="To Date">
+    <select id="monthFilter">
+      <option value="">--Select Month--</option>
+      <option value="1">January</option><option value="2">February</option>
+      <option value="3">March</option><option value="4">April</option>
+      <option value="5">May</option><option value="6">June</option>
+      <option value="7">July</option><option value="8">August</option>
+      <option value="9">September</option><option value="10">October</option>
+      <option value="11">November</option><option value="12">December</option>
+    </select>
+    <button onclick="filterData()">Filter</button>
+    <button onclick="window.print()">Print</button>
+  </div>
+</div>
+
+<div class="print-header" style="display:none;">
+  <img src="sa.png" alt="Logo Left">
+  <h2>Expanses Details</h2>
+  <img src="2.jpg" alt="Logo Right">
+</div>
+<div class="print-date" style="display:none;" id="printDate"></div>
+
+<div class="table-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th>Bill</th><th>Date</th><th>Type</th><th>Category</th>
+        <th>Description</th><th>Amount</th><th>Mode</th><th>Ref</th>
+      </tr>
+    </thead>
+    <tbody id="data"></tbody>
+    <tfoot id="summary"></tfoot>
+  </table>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const GS_URL = "https://script.google.com/macros/s/AKfycbyP-Gc7ZEKPvI8pwjIh_CeCzj4CwN2gkzwPuJfdFBGI-VBcWsbiLLcKq0LUnKWeijXaeQ/exec";
+let allData = [];
+
+function formatDate(d){
+  if(!d) return "";
+  const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dt=new Date(d);
+  if(isNaN(dt)) return d;
+  const day = ("0"+dt.getDate()).slice(-2);
+  const month = m[dt.getMonth()];
+  const year = dt.getFullYear();
+  return day+"-"+month+"-"+year;
+}
+
+function formatDateTime(d){
+  const dt = new Date(d);
+  const day = ("0"+dt.getDate()).slice(-2);
+  const month=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()];
+  const year = dt.getFullYear();
+  const hours = ("0"+dt.getHours()).slice(-2);
+  const minutes = ("0"+dt.getMinutes()).slice(-2);
+  return day+"-"+month+"-"+year+" "+hours+":"+minutes;
+}
+
+function load(){
+  document.getElementById("loadingMsg").style.display = "block";
+  fetch(GS_URL,{
+    method:"POST",
+    body:JSON.stringify({action:"view"})
+  }).then(r=>r.json()).then(rows=>{
+    allData = rows;
+    show(rows);
+  }).finally(()=>{
+    document.getElementById("loadingMsg").style.display = "none";
+  });
+}
+
+function show(rows){
+  let h="";
+  let issuedTotal = 0;
+  let receivedTotal = 0;
+
+  rows.forEach(r=>{
+    const dateFormatted = formatDate(r[1]);
+    h+=`<tr>
+      <td>${r[0]}</td><td>${dateFormatted}</td><td>${r[2]}</td>
+      <td>${r[3]}</td><td>${r[4]}</td>
+      <td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td>
+    </tr>`;
+    if(r[2].toLowerCase() === "issued") issuedTotal += parseFloat(r[5]) || 0;
+    if(r[2].toLowerCase() === "received") receivedTotal += parseFloat(r[5]) || 0;
+  });
+  document.getElementById("data").innerHTML = h;
+
+  const summary = `<tr>
+    <td colspan="5">Total</td>
+    <td>Issued: ${issuedTotal.toFixed(2)}<br>Received: ${receivedTotal.toFixed(2)}</td>
+    <td colspan="2"></td>
+  </tr>`;
+  document.getElementById("summary").innerHTML = summary;
+}
+
+function filterData(){
+  const fromDate = new Date(document.getElementById("fromDate").value);
+  const toDate = new Date(document.getElementById("toDate").value);
+  const month = document.getElementById("monthFilter").value;
+  const filtered = allData.filter(r=>{
+    const d = new Date(r[1]);
+    let pass = true;
+    if(fromDate && !isNaN(fromDate)) pass = pass && d >= fromDate;
+    if(toDate && !isNaN(toDate)) pass = pass && d <= toDate;
+    if(month) pass = pass && (d.getMonth()+1) == month;
+    return pass;
+  });
+  show(filtered);
+}
+
+window.onbeforeprint = function(){
+  document.querySelector('.print-header').style.display = 'flex';
+  const now = new Date();
+  document.getElementById('printDate').style.display = 'block';
+  document.getElementById('printDate').innerText = 'Print Date: '+formatDateTime(now);
+}
+window.onafterprint = function(){
+  document.querySelector('.print-header').style.display = 'none';
+  document.getElementById('printDate').style.display = 'none';
+}
+
+window.onload = load;
+</script>
+</body>
+</html>

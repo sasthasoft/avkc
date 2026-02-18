@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rent Payment Report</title>
+
+<style>
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial;background:#f4f6f8;}
+.container{max-width:1200px;margin:auto;padding:10px;}
+h2,h3{text-align:center;color:#c2185b;margin:5px 0;}
+.card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:15px;}
+input{width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:900px;font-size:12px;margin-top:10px;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
+th{background:#f06292;color:#fff;}
+#loading{text-align:center;color:#c2185b;font-weight:bold;margin:10px;}
+tr:hover{background:#fce4ec;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Rental Duplicate Bill Print</h2>
+
+<div class="card">
+<label>Search Bill Number</label>
+<input type="number" id="filterBillNo" placeholder="Enter Bill No" oninput="searchByBillNo()">
+</div>
+
+<div id="loading">Loading data...</div>
+
+<div class="card">
+<div class="table-wrap">
+<table id="dataTable">
+<thead></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+</div>
+
+<!-- Hidden Print Area -->
+<div id="bill" style="display:none;"></div>
+
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbyogWMiTNNixoMp7E0NEA7-z_y0Syxxrp_NrG8hWhI7bpPRNokcNAKYo1EyZxxx6qnldA/exec";
+let allPayments=[];
+
+/* Load Data */
+async function loadPayments(){
+document.getElementById("loading").style.display="block";
+try{
+const res=await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({action:"getPayments"})
+});
+const data=await res.json();
+allPayments=data.data||[];
+document.getElementById("loading").style.display="none";
+renderTable(allPayments);
+}catch(e){
+document.getElementById("loading").innerText="Failed to load!";
+}
+}
+
+/* Render Table */
+function renderTable(payments){
+const table=document.getElementById("dataTable");
+const h=table.querySelector("thead");
+const b=table.querySelector("tbody");
+h.innerHTML=b.innerHTML="";
+
+if(!payments.length){
+b.innerHTML="<tr><td colspan='10'>No Data</td></tr>";
+return;
+}
+
+const keys=Object.keys(payments[0]);
+h.innerHTML="<tr>"+keys.map(k=>`<th>${k}</th>`).join("")+"</tr>";
+
+b.innerHTML=payments.map(r=>`
+<tr onclick='printBillFormat(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+${keys.map(k=>`<td>${r[k]||""}</td>`).join("")}
+</tr>
+`).join("");
+}
+
+/* Bill No Full Search */
+function searchByBillNo(){
+const billNo=document.getElementById("filterBillNo").value.trim();
+
+if(!billNo){
+renderTable(allPayments);
+return;
+}
+
+const filtered=allPayments.filter(p=>
+String(p["Bill No"]).trim()===billNo
+);
+
+renderTable(filtered);
+}
+
+/* PRINT BILL FORMAT */
+function printBillFormat(d){
+
+const bill=document.getElementById("bill");
+
+bill.innerHTML=`
+<div class="print-container">
+
+<div class="print-header">
+<img src="sa.png" style="width:80px;">
+<div style="text-align:center;flex:1;">
+  <div style="color:blue;font-weight:bold;font-size:10px;">
+உ
+</div>
+<div style="color:#c2185b;font-weight:bold;font-size:11px;">
+ஸ்ரீ ராஜராஜேஸ்வரி அம்பாள் துணை
+</div>
+<div style="color:green;font-weight:bold;font-size:14px;">
+கோவில்பட்டி ஆயிர வைசிய காசுக்காரச் செட்டிப்பிள்ளைகள் சங்கம்
+</div>
+<div style="color:#c2185b;font-weight:bold;font-size:14px;">
+23, வடக்கு ரத வீதி சிவன் கோயில் தெரு
+</div>
+<div style="color:#c2185b;font-weight:bold;font-size:14px;">
+( ஸ்ரீ செண்பகவல்லி அம்மன் கோவில் சமீபம் ) கோவில்பட்டி - 628 501
+</div>
+<div style="margin-top:6px;font-weight:bold;color:blue;">
+கடைகள் வாடகை ரசீது
+</div>
+</div>
+<img src="2.jpg" style="width:80px;">
+</div>
+
+<hr>
+
+<table style="width:100%;border-collapse:collapse;margin-top:15px;" border="1">
+<tr>
+<td rowspan="2" style="width:180px;text-align:center;">
+${d.imageBase64?`<img src="${d.imageBase64}" style="width:140px;height:160px;object-fit:cover;">`
+:`<img src="c.png" style="width:140px;height:160px;">`}
+</td>
+<td>
+<b>வாடகைதாரர் :</b> ${d["Tenant Name"] || "-"} &nbsp;&nbsp;
+<b>மொபைல் :</b> ${d["Mobile"] || "-"}
+  </td>
+</tr>
+<tr>
+<td>
+<b>கடை எண் :</b> ${d.Shop_No || "-"} &nbsp;&nbsp;
+<b>மாத வாடகை :</b> ₹${d.Rental || 0}
+</td>
+</tr>
+</table>
+
+<h3 style="color:#c2185b;margin-top:15px;">கட்டண விவரங்கள் :</h3>
+
+<table style="width:100%;border-collapse:collapse;font-size:12px;" border="1">
+<tr>
+<th>Bill No</th>
+<th>Date</th>
+<th>Month</th>
+<th>Rental</th>
+<th>Tax</th>
+<th>Discount</th>
+<th>Now Paying</th>
+<th>Pending</th>
+</tr>
+<tr>
+<td>${d["Bill_No"]||"-"}</td>
+<td>${d.PaymentDate||"-"}</td>
+<td>${d.Months||"-"}</td>
+<td>₹${d.Rental_Per_Month||0}</td>
+<td>${d.Tax_Percentage||0}%</td>
+<td>₹${d.Discount||0}</td>
+<td>₹${d.Now_Paid||0}</td>
+<td>₹${d.Pending||0}</td>
+</tr>
+</table>
+
+<div style="margin-top:15px;font-size:12px;line-height:1.5;">
+<h3 style="color:#c2185b;">வாடகை நிபந்தனைகள்</h3>
+    1.மாத வாடகை பேசி ஒப்புக்கொண்டு மூன்று மாத வாடகை அட்வான்ஸாக செலுத்த வேண்டும். மாத வாடகையை மறுமாதம் 5ம் தேதிக்குள் செலுத்த வேண்டும். தவறினால் வட்டியுடன் சேர்த்து வசூலிக்கப்படும்.<br>
+2. எக்காரணத்தை முன்னிட்டும் உள்வாடகைக்கோ வேறு நபருக்கோ மாற்றிக் கொள்ளவோ வாடகைதாரருக்கு உரிமை கிடையாது. கட்டிடம்
+தேவையில்லையென்றால் வாடகை பாக்கிகள் சகிதம் எங்கள் வசம் ஒப்புவிக்க வேண்டும். வாடகைதாரர்கள் ரிப்பேர் செய்துகொள்ள உரிமை கிடையாது.<br>
+3. எலக்ட்ரிக் சார்ஜ்களை மாத-மாதம் வாடகைதாரர்கள் செலுத்திக் கொள்ளவேண்டும்.<br>
+4. கட்டிடம் காலிசெய்யும் போது வாடகைப் பாக்கிகள் பூராவும் செலுத்திவிட்டு அட்வான்ஸ் தொகையை வாபஸ் பெற்றுக்கொள்ள வேண்டும். ஆக்கிரமிப்புக்கு இடம் கொடுக்கக் கூடாது ஆக்கிரமிப்பு செய்யவும் கூடாது.<br>
+5. இதன்படி நடந்து வருவேனாகவும்.<br>
+6. அரசால் விதிக்கப்படும் (GST) வரி நடைமுறையில் இருந்தால்,
+அதற்கான தொகையை வாடகைதாரரே செலுத்த வேண்டும்.<br>
+
+7. வரி செலுத்தத் தவறினால் அல்லது தாமதமானால்,
+அதனால் ஏற்படும் அபராதம், வட்டி அல்லது சட்ட நடவடிக்கைகளுக்கான
+முழுப் பொறுப்பும் வாடகைதாரரையே சாரும்.<br>
+ </div>
+
+<div style="margin-top:30px;color:#c2185b;text-align:right;font-weight:bold;">
+வசூலித்தவர் கையொப்பம் _____________<br><br>
+வாடகைதாரர் கையொப்பம் _____________
+</div>
+
+</div>
+`;
+
+printBill();
+}
+
+/* PRINT FUNCTION */
+function printBill(){
+const bill=document.getElementById("bill");
+const iframe=document.createElement("iframe");
+document.body.appendChild(iframe);
+const doc=iframe.contentWindow.document;
+
+doc.open();
+doc.write(`
+<html>
+<head>
+<title>Print</title>
+<style>
+@page { size:A4; margin:10mm; }
+body{font-family:Arial;margin:0;padding:10px;}
+.print-header{display:flex;justify-content:space-between;align-items:center;}
+th,td{padding:6px;text-align:center;}
+</style>
+</head>
+<body>
+${bill.innerHTML}
+</body>
+</html>
+`);
+doc.close();
+iframe.contentWindow.focus();
+iframe.contentWindow.print();
+
+setTimeout(()=>{document.body.removeChild(iframe);},500);
+}
+
+/* Load Data */
+loadPayments();
+</script>
+
+</body>
+</html>

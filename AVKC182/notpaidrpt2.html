@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rental Month Paid Report</title>
+
+<style>
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial;background:#f4f6f8;}
+.container{max-width:1200px;margin:auto;padding:10px;}
+h2,h3{text-align:center;color:#c2185b;margin:5px 0;}
+
+.card{
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,.1);
+margin-bottom:15px;
+}
+
+.row{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:10px;
+align-items:end;
+}
+
+input, select{
+width:100%;
+padding:8px;
+border:1px solid #ccc;
+border-radius:6px;
+}
+
+.table-wrap{overflow-x:auto;}
+
+table{
+width:100%;
+border-collapse:collapse;
+min-width:500px;
+font-size:14px;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #ccc;
+padding:6px;
+text-align:center;
+}
+
+th{
+background:#f06292;
+color:#fff;
+}
+
+.pending-title{color:red;}
+
+#loading{
+text-align:center;
+color:#c2185b;
+font-weight:bold;
+margin:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Not Paid Detail Report</h2>
+
+<div id="loading">Loading data...</div>
+
+<div class="card">
+<div class="row">
+<div>
+<label>Search Shop No</label>
+<input type="text" id="shopSearch" placeholder="Enter Shop No" onkeyup="renderReport()">
+</div>
+<div>
+<label>Select Year</label>
+<select id="yearSelect" onchange="renderReport()">
+<option value="">--All Years--</option>
+</select>
+</div>
+<div>
+<label>Select Month</label>
+<select id="monthSelect" onchange="renderReport()">
+<option value="">--All Months--</option>
+</select>
+</div>
+</div>
+</div>
+
+<div class="card">
+<h3>Month Wise Count</h3>
+<div class="table-wrap">
+<table id="monthTable">
+<thead>
+<tr>
+<th>Month</th>
+<th>Paid Count</th>
+<th>Pending Count</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<h3 class="pending-title">Pending Shops</h3>
+<div class="table-wrap">
+<table id="pendingTable">
+<thead>
+<tr>
+<th>Shop No</th>
+<th>Tenant Name</th>
+<th>Mobile</th>
+<th>Month</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+<script>
+
+const API_URL="https://script.google.com/macros/s/AKfycbyxlyK3FuJ7vpa3HFpuqCa_x_k0V6pO5-w828KmHielditmmkvg_C0jB83AsiVrnUhC/exec";
+
+let tenants=[];
+let payments=[];
+
+const monthNames=[
+"January","February","March","April","May","June",
+"July","August","September","October","November","December"
+];
+
+/* SAFE COLUMN FINDER */
+function findValue(obj, possibleKeys){
+for(let key of possibleKeys){
+if(obj[key]!==undefined) return obj[key];
+}
+return "";
+}
+
+/* CHECK IF MONTH PAID FOR SHOP AND YEAR */
+function isMonthPaid(shopNo, monthName, year){
+return payments.some(p=>{
+let pShop=findValue(p,["ShopNo","Shop_No","Shop No"]);
+if(String(pShop).trim()!==String(shopNo).trim()) return false;
+
+let months=findValue(p,["Months","months","Month"]);
+months=months.toString().toLowerCase();
+const arr=months.split(",").map(m=>m.trim());
+
+let pd=findValue(p,["PaymentDate","paymentDate","Date"]);
+let pYear=pd ? new Date(pd).getFullYear() : new Date().getFullYear();
+
+return arr.includes(monthName.toLowerCase()) && pYear===year;
+});
+}
+
+/* FILTER TENANTS */
+function getFilteredTenants(){
+const val=document.getElementById("shopSearch").value.trim();
+if(!val) return tenants;
+return tenants.filter(t=>{
+let shop=findValue(t,["ShopNo","Shop_No","Shop No"]);
+return String(shop).trim()===val;
+});
+}
+
+/* LOAD DATA */
+async function loadData(){
+try{
+const tRes=await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({action:"getTenants"})
+});
+const tJson=await tRes.json();
+tenants=tJson.data||[];
+
+const pRes=await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify({action:"getPayments"})
+});
+const pJson=await pRes.json();
+payments=pJson.data||[];
+
+document.getElementById("loading").style.display="none";
+
+populateYearSelect();
+populateMonthSelect();
+renderReport();
+}catch(e){
+document.getElementById("loading").innerText="Failed to load data!";
+}
+}
+
+/* POPULATE YEAR DROPDOWN */
+function populateYearSelect(){
+let yearSet=new Set();
+payments.forEach(p=>{
+let pd=findValue(p,["PaymentDate","paymentDate","Date"]);
+if(pd) yearSet.add(new Date(pd).getFullYear());
+});
+const select=document.getElementById("yearSelect");
+yearSet=[...yearSet].sort();
+yearSet.forEach(y=>{
+let opt=document.createElement("option");
+opt.value=y;
+opt.text=y;
+select.add(opt);
+});
+}
+
+/* POPULATE MONTH DROPDOWN */
+function populateMonthSelect(){
+const select=document.getElementById("monthSelect");
+monthNames.forEach(m=>{
+let opt=document.createElement("option");
+opt.value=m;
+opt.text=m;
+select.add(opt);
+});
+}
+
+/* RENDER REPORT */
+function renderReport(){
+renderMonthTable();
+renderPending();
+}
+
+/* RENDER MONTH WISE COUNT */
+function renderMonthTable(){
+const tbody=document.querySelector("#monthTable tbody");
+tbody.innerHTML="";
+
+let selectedYear=parseInt(document.getElementById("yearSelect").value);
+if(!selectedYear) selectedYear=new Date().getFullYear();
+
+monthNames.forEach(month=>{
+let paidCount=0, pendingCount=0;
+getFilteredTenants().forEach(t=>{
+let shop=findValue(t,["ShopNo","Shop_No","Shop No"]);
+if(isMonthPaid(shop, month, selectedYear)){
+paidCount++;
+}else{
+pendingCount++;
+}
+});
+tbody.innerHTML+=`<tr>
+<td>${month}-${selectedYear}</td>
+<td style="color:green;font-weight:bold;">${paidCount}</td>
+<td style="color:red;font-weight:bold;">${pendingCount}</td>
+</tr>`;
+});
+}
+
+/* RENDER PENDING TABLE WITH MONTH FILTER */
+function renderPending(){
+const tbody=document.querySelector("#pendingTable tbody");
+tbody.innerHTML="";
+
+let selectedYear=parseInt(document.getElementById("yearSelect").value);
+if(!selectedYear) selectedYear=new Date().getFullYear();
+
+let selectedMonth=document.getElementById("monthSelect").value;
+
+getFilteredTenants().forEach(t=>{
+let shop=findValue(t,["ShopNo","Shop_No","Shop No"]);
+let name=findValue(t,["TenantName","Tenant Name","Name"]);
+let mobile=findValue(t,["Mobile","Mobile_No","Phone"]);
+
+monthNames.forEach(month=>{
+if(selectedMonth && month!==selectedMonth) return; // Skip months not selected
+if(!isMonthPaid(shop, month, selectedYear)){
+tbody.innerHTML+=`<tr>
+<td>${shop}</td>
+<td>${name}</td>
+<td>${mobile}</td>
+<td>${month}-${selectedYear}</td>
+<td style="color:red;font-weight:bold;">Pending</td>
+</tr>`;
+}
+});
+});
+}
+
+loadData();
+
+</script>
+</body>
+</html>

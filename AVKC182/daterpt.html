@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Rent Payment Report</title>
+
+<style>
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;}
+.container{max-width:1200px;margin:auto;padding:10px;}
+h2,h3{text-align:center;color:#c2185b;margin:5px 0;}
+.card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:15px;}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;}
+input{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;}
+button{padding:10px;border:none;border-radius:8px;background:#c2185b;color:#fff;font-weight:bold;cursor:pointer;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
+th{background:#f06292;color:#fff;}
+.total-row{font-weight:bold;background:#f2f2f2;}
+.print-main{margin-top:10px;width:100%;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Date Wise Payment Report</h2>
+
+<div class="card">
+<div class="row">
+<input type="date" id="filterDate">
+<button onclick="searchByDate()">🔍 Search</button>
+</div>
+</div>
+
+<div class="card" id="filteredResultsCard" style="display:none;">
+<h3>Search Results</h3>
+<div class="table-wrap">
+<table id="filteredTable">
+<thead></thead>
+<tbody></tbody>
+</table>
+</div>
+<button class="print-main" onclick="printReport()">🖨 Print Report</button>
+</div>
+
+<div class="card" id="allTableCard">
+<h3>All Payments</h3>
+<div class="table-wrap">
+<table id="dataTable">
+<thead></thead>
+<tbody></tbody>
+</table>
+</div>
+<button class="print-main" onclick="printReport()">🖨 Print Report</button>
+</div>
+
+</div>
+
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbyogWMiTNNixoMp7E0NEA7-z_y0Syxxrp_NrG8hWhI7bpPRNokcNAKYo1EyZxxx6qnldA/exec";
+let allPayments=[];
+const removedColumns=["Rental_Set","Remarks","Image_Based64","Created_At","row"];
+const totalColumns=["Net_Amount","Now_Paid","Pending"];
+const dateColumn="PaymentDate"; // Change if needed
+
+function formatDate(d){
+if(!d) return "";
+let date=new Date(d);
+if(isNaN(date)) return d;
+return date.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+}
+
+async function loadPayments(){
+const res=await fetch(API_URL,{method:"POST",body:JSON.stringify({action:"getPayments"})});
+const data=await res.json();
+allPayments=data.data||[];
+renderTable(allPayments,"dataTable");
+}
+
+function renderTable(payments,id){
+const table=document.getElementById(id);
+const h=table.querySelector("thead");
+const b=table.querySelector("tbody");
+h.innerHTML="";
+b.innerHTML="";
+
+if(!payments.length){
+b.innerHTML="<tr><td>No Data</td></tr>";
+return;
+}
+
+let keys=Object.keys(payments[0]).filter(k=>!removedColumns.includes(k));
+h.innerHTML="<tr>"+keys.map(k=>`<th>${k}</th>`).join("")+"</tr>";
+
+let totals={Net_Amount:0,Now_Paid:0,Pending:0};
+
+payments.forEach(r=>{
+let row="<tr>";
+keys.forEach(k=>{
+let val=r[k]||"";
+if(k.toLowerCase().includes("date")) val=formatDate(val);
+if(totalColumns.includes(k)) totals[k]+=parseFloat(val)||0;
+row+=`<td>${val}</td>`;
+});
+row+="</tr>";
+b.innerHTML+=row;
+});
+
+let summary="<tr class='total-row'>";
+keys.forEach(k=>{
+if(totalColumns.includes(k)) summary+=`<td>${totals[k].toFixed(2)}</td>`;
+else summary+="<td></td>";
+});
+summary+="</tr>";
+b.innerHTML+=summary;
+}
+
+function searchByDate(){
+let selectedDate=document.getElementById("filterDate").value;
+
+if(!selectedDate){
+document.getElementById("filteredResultsCard").style.display="none";
+document.getElementById("allTableCard").style.display="block";
+return;
+}
+
+let filtered=allPayments.filter(p=>{
+let paymentDate=new Date(p[dateColumn]);
+let inputDate=new Date(selectedDate);
+return paymentDate.toDateString()===inputDate.toDateString();
+});
+
+if(!filtered.length){
+alert("No records found for selected date!");
+return;
+}
+
+document.getElementById("filteredResultsCard").style.display="block";
+document.getElementById("allTableCard").style.display="none";
+renderTable(filtered,"filteredTable");
+}
+
+function printReport(){
+const filteredVisible=document.getElementById("filteredResultsCard").style.display==="block";
+const sourceTable=filteredVisible?
+document.getElementById("filteredTable"):
+document.getElementById("dataTable");
+
+const now=new Date();
+const dtStr=now.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+
+const w=window.open("","_blank");
+w.document.write(`
+<html>
+<head>
+<title>A4 Print</title>
+<style>
+@page { size:A4 landscape; margin:10mm; }
+body{font-family:Arial;margin:0;}
+.page{width:297mm;min-height:210mm;margin:auto;padding:10mm;}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:10px;
+}
+
+.header img{
+height:70px;
+}
+
+.title{
+text-align:center;
+margin-bottom:10px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:9px;
+table-layout:fixed;
+}
+
+th,td{
+border:1px solid #000;
+padding:4px;
+text-align:center;
+}
+
+th{
+background:#f06292;
+color:#fff;
+}
+
+.total-row{
+font-weight:bold;
+background:#f2f2f2;
+}
+
+.print-btn{
+margin:10px auto;
+display:block;
+padding:8px 20px;
+background:#c2185b;
+color:white;
+border:none;
+border-radius:6px;
+}
+
+@media print{
+.print-btn{display:none;}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+<div class="header">
+<img src="sa.png">
+<img src="2.jpg">
+</div>
+
+<div class="title">
+<h2>AVKC சங்கம் - கோவில்பட்டி</h2>
+<h3>Date Wise Payment Report</h3>
+<h4>Date: ${dtStr}</h4>
+</div>
+
+${sourceTable.outerHTML}
+
+<button class="print-btn" onclick="window.print()">🖨 Print Now</button>
+
+</div>
+</body>
+</html>
+`);
+w.document.close();
+}
+
+loadPayments();
+</script>
+</body>
+</html>
