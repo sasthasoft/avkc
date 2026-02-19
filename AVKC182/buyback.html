@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Amount Collection</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f4f6f8}
+header{background:#c2185b;color:#fff;padding:15px;text-align:center;font-size:22px}
+
+.container{max-width:1000px;margin:auto;padding:15px}
+
+.card{
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,.1);
+margin-bottom:15px;
+border-top:4px solid #c2185b;
+}
+
+.row{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:10px;
+margin-bottom:10px;
+}
+
+label{font-size:13px;font-weight:bold}
+input{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px}
+
+button{
+padding:10px;
+border:none;
+border-radius:8px;
+background:#c2185b;
+color:#fff;
+font-weight:bold;
+cursor:pointer;
+width:100%;
+}
+
+button:hover{opacity:.9}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:13px;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #ccc;
+padding:8px;
+text-align:center;
+}
+
+th{background:#f06292;color:#fff}
+
+#bill{display:none}
+
+@media print{
+body *{visibility:hidden}
+#bill,#bill *{visibility:visible}
+#bill{position:absolute;left:0;top:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<header>Pending Amount Collection</header>
+
+<div class="container">
+
+<div class="card">
+<h3>Search Bill</h3>
+
+<div class="row">
+<div>
+<label>Bill No</label>
+<input id="searchBill">
+</div>
+
+<div>
+<label>Mobile</label>
+<input id="searchMobile">
+</div>
+
+<div style="align-self:end">
+<button onclick="searchBill()">Search</button>
+</div>
+</div>
+
+<table id="resultTable">
+<thead></thead>
+<tbody></tbody>
+</table>
+</div>
+
+
+<div class="card">
+<h3>Collect Pending</h3>
+
+<div id="selectedInfo" style="color:green;font-weight:bold;margin-bottom:10px"></div>
+
+<div class="row">
+<div>
+<label>Now Paid</label>
+<input id="nowPaid" readonly>
+</div>
+
+<div>
+<label>Pending</label>
+<input id="pendingAmt" readonly>
+</div>
+
+<div>
+<label>Collection Amount</label>
+<input id="collectAmt">
+</div>
+</div>
+
+<button onclick="saveCollection()">Save & Print Receipt</button>
+</div>
+
+</div>
+
+<div id="bill"></div>
+
+<script>
+
+const PAYMENT_URL = "https://script.google.com/macros/s/AKfycbxn9CxTZTSS-bWSzehNopqFcwaOzLuK5AqpIzFvSEJqXoeWUKkoHttNFJRz_hapa1feLQ/exec";
+
+let selectedBill = null;
+
+/* SEARCH BILL */
+async function searchBill(){
+
+try{
+
+const billNo = document.getElementById("searchBill").value.trim();
+const mobile = document.getElementById("searchMobile").value.trim();
+
+if(!billNo && !mobile){
+alert("Enter Bill No or Mobile");
+return;
+}
+
+const res = await fetch(PAYMENT_URL,{
+method:"POST",
+mode:"cors",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({action:"getPayments"})
+});
+
+if(!res.ok){
+throw new Error("Server not reachable");
+}
+
+const result = await res.json();
+
+const tableHead = document.querySelector("#resultTable thead");
+const tableBody = document.querySelector("#resultTable tbody");
+
+tableHead.innerHTML="";
+tableBody.innerHTML="";
+
+if(!result.data || result.data.length == 0){
+alert("No Records Found");
+return;
+}
+
+const filtered = result.data.filter(r =>
+(billNo && String(r.BillNo).includes(billNo)) ||
+(mobile && String(r.mobile).includes(mobile))
+);
+
+if(filtered.length == 0){
+alert("No Record Found");
+return;
+}
+
+tableHead.innerHTML =
+"<tr><th>Bill No</th><th>Name</th><th>Mobile</th><th>Now Paid</th><th>Pending</th><th>Select</th></tr>";
+
+filtered.forEach(r=>{
+tableBody.innerHTML+=`
+<tr>
+<td>${r.BillNo}</td>
+<td>${r.tenantName}</td>
+<td>${r.mobile}</td>
+<td>₹${r.nowPaid}</td>
+<td>₹${r.pending}</td>
+<td><button onclick='selectBill(${JSON.stringify(r)})'>Select</button></td>
+</tr>`;
+});
+
+}catch(err){
+alert("Error: " + err.message);
+console.log(err);
+}
+
+}
+
+/* SELECT BILL */
+function selectBill(row){
+
+selectedBill = row;
+
+document.getElementById("selectedInfo").innerText =
+"Selected Bill: "+row.BillNo+" | Name: "+row.tenantName;
+
+document.getElementById("nowPaid").value = row.nowPaid;
+document.getElementById("pendingAmt").value = row.pending;
+document.getElementById("collectAmt").value = "";
+}
+
+/* VALIDATE AMOUNT */
+document.getElementById("collectAmt").addEventListener("input",function(){
+
+if(!selectedBill) return;
+
+const entered = Number(this.value||0);
+const pending = Number(selectedBill.pending||0);
+
+if(entered > pending){
+alert("Amount exceeds pending!");
+this.value="";
+}
+
+});
+
+/* SAVE COLLECTION */
+async function saveCollection(){
+
+try{
+
+if(!selectedBill){
+alert("Select Bill First");
+return;
+}
+
+const collectAmt = Number(document.getElementById("collectAmt").value||0);
+const pending = Number(selectedBill.pending||0);
+
+if(collectAmt <= 0){
+alert("Enter valid amount");
+return;
+}
+
+if(collectAmt > pending){
+alert("Invalid amount");
+return;
+}
+
+const res = await fetch(PAYMENT_URL,{
+method:"POST",
+mode:"cors",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+action:"collectPending",
+billNo:selectedBill.BillNo,
+collectAmount: collectAmt
+})
+});
+
+const data = await res.json();
+
+if(data.status === "success"){
+
+alert("Payment Updated");
+
+printReceipt(collectAmt, data.updatedPaid, data.updatedPending);
+
+}else{
+alert("Error: " + data.message);
+}
+
+}catch(err){
+alert("Error: " + err.message);
+console.log(err);
+}
+
+}
+
+/* PRINT RECEIPT */
+function printReceipt(amount, updatedPaid, updatedPending){
+
+const div = document.getElementById("bill");
+
+div.innerHTML = `
+<h2 style="text-align:center">Payment Receipt</h2>
+<hr>
+<p><b>Bill No:</b> ${selectedBill.BillNo}</p>
+<p><b>Name:</b> ${selectedBill.tenantName}</p>
+<p><b>Mobile:</b> ${selectedBill.mobile}</p>
+<p><b>Collected Amount:</b> ₹${amount}</p>
+<p><b>Total Paid:</b> ₹${updatedPaid}</p>
+<p><b>Remaining Pending:</b> ₹${updatedPending}</p>
+<br><br>
+<p>Signature ____________________</p>
+`;
+
+window.print();
+}
+
+</script>
+
+</body>
+</html>
